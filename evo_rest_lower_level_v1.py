@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-05-18
+# Updated 2023-08-23
 # Created 2023-03-20
 
 # Notes:
@@ -173,6 +173,9 @@ if run_global_signal_regression == 1:
     cmd_list1 = [''] # reserve memory for first set of commands -> extract global time series (have 2 comd execution steps so I can create design matrix using Python in the middle)
     cmd_list2 = ['','',''] # reserve memory for second set of commands -> create general linear model (GLM) of preproc nifti using global time series as regressor, return gsr nifti, clean up files
     for sub in subs:
+            # NOTE: found below cmd for "demeaning" in fslmaths cmdline docs - may want to test this out at some point
+            # cmd_remean = f'fslmaths {preproc_dir}/{sub}_{nifti_fn} -Tmean -mul -1 -add {preproc_dir}/{sub}_{nifti_fn} {preproc_dir}/{sub}_{nifti_remean_fn}'
+
         preproc_dir = f'{datadir}/{sub}/{sub}_{preproc_folder}'
         # preproc_dir = f'{datadir}/{sub}'
         input_nifti = f'{preproc_dir}/{sub}_{nifti_fn}'
