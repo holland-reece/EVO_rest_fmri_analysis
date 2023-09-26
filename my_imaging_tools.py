@@ -1,11 +1,15 @@
 import os
 import subprocess
 import glob
+import json
 from typing import List, Union
 
 class fmri_tools:
 
     """
+    2023-09-25 : add read_json function
+        - store TR, TE, dwell time, etc. in string list
+
     2023-07-18 : init
         - can generate list of subject IDs from a directory of subject folders (default), a subject list text file, or an origin directory with subject session folders
         - need to make cp_and_rename_files() more generalizable
@@ -121,5 +125,16 @@ class fmri_tools:
             cmd[0] = f'cp {f} {dest}' # copy files to studydir dir
             cmd[1] = f'mv {dest}/{fn} {dest}/{fn_new}' # rename files
             self.exec_cmds(cmd)
+
+    # def read_json(json_path):
+    #     json_info = dict()
+    #     with open(f'{datadir}/{sub}/func/unprocessed/session_1/run_1/Rest_S1_E1_R1.json', 'rt') as rest_json:
+    #         rest_info = json.load(rest_json)
+    #     json_info.TR = rest_info['RepetitionTime']
+
+    #     self.json_info = json_info
+
+
+
 
     
