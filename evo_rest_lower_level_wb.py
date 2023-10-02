@@ -7,7 +7,7 @@
 
 # Next:
     # add read_json function to my_imaging_tools module (started)
-    # use Nipype to execute Connectome Workbench commands (for now, use exec_cmds)
+    # decide whether to use wb_command -cifti-average-roi-correlation or Feat GLM for lower levels
 
 #---------------------------------------------------------------------------------------------------------------
 
@@ -44,41 +44,7 @@ for sub in tqdm(q.subs):
 
 
 
-
-# %% ROI-to-wholebrain correlation
-# https://www.humanconnectome.org/software/workbench-command/-cifti-average-roi-correlation
-
-"""
-
-wb_command -cifti-average-roi-correlation
-
-    Averages rows for each map of the ROI(s), takes the correlation of each
-    ROI average to the rest of the rows in the same file, applies the fisher
-    small z transform, then averages the results across all files.  ROIs are
-    always treated as weighting functions, including negative values.  For
-    efficiency, ensure that everything that is not intended to be used is
-    zero in the ROI map.  If -cifti-roi is specified, -left-roi, -right-roi,
-    -cerebellum-roi, and -vol-roi must not be specified.  If multiple
-    non-cifti ROI files are specified, they must have the same number of
-    columns.
-
-"""
-
-# cmd = [None]*2
-# for sub in tqdm(q.subs):
-#     for roi_name in rois:
-#         roi = f'{roidir}/{roi_name}.nii.gz' # full path to roi nifti file
-
-#         # get TR from JSON
-#         with open(f'{datadir}/{sub}/func/unprocessed/session_1/run_1/Rest_S1_E1_R1.json', 'rt') as rest_json:
-#             rest_info = json.load(rest_json)
-#         TR = rest_info['RepetitionTime']
-
-#         for s in sessions:
-#             subdir = f'{datadir}/{sub}/func/rest/session_{s}/run_1'
-#             cifti_out = f''
-#             cmd[0] = f'wb_command -cifti-average-roi-correlation {cifti_out} - output - output cifti file'
-        
+      
         
 # %% Extract ROI timeseries from "fake niftis" for input into Level 1 analysis
 # fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
@@ -145,3 +111,39 @@ print('Feat analyses done.\n\n')
 
 
 # %% Convert "fake niftis" back to ciftis
+
+
+# %% ROI-to-wholebrain correlation
+# https://www.humanconnectome.org/software/workbench-command/-cifti-average-roi-correlation
+
+"""
+
+wb_command -cifti-average-roi-correlation
+
+    Averages rows for each map of the ROI(s), takes the correlation of each
+    ROI average to the rest of the rows in the same file, applies the fisher
+    small z transform, then averages the results across all files.  ROIs are
+    always treated as weighting functions, including negative values.  For
+    efficiency, ensure that everything that is not intended to be used is
+    zero in the ROI map.  If -cifti-roi is specified, -left-roi, -right-roi,
+    -cerebellum-roi, and -vol-roi must not be specified.  If multiple
+    non-cifti ROI files are specified, they must have the same number of
+    columns.
+
+"""
+
+# cmd = [None]*2
+# for sub in tqdm(q.subs):
+#     for roi_name in rois:
+#         roi = f'{roidir}/{roi_name}.nii.gz' # full path to roi nifti file
+
+#         # get TR from JSON
+#         with open(f'{datadir}/{sub}/func/unprocessed/session_1/run_1/Rest_S1_E1_R1.json', 'rt') as rest_json:
+#             rest_info = json.load(rest_json)
+#         TR = rest_info['RepetitionTime']
+
+#         for s in sessions:
+#             subdir = f'{datadir}/{sub}/func/rest/session_{s}/run_1'
+#             cifti_out = f''
+#             cmd[0] = f'wb_command -cifti-average-roi-correlation {cifti_out} - output - output cifti file'
+  
