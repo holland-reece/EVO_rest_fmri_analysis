@@ -2,6 +2,7 @@ import os
 import subprocess
 import glob
 import json
+import tqdm
 from typing import List, Union
 
 class fmri_tools:
@@ -27,7 +28,7 @@ class fmri_tools:
 
     # Run commands in system terminal
     def exec_cmds(self, commands):
-        for command in commands:
+        for command in tqdm(commands):
             subprocess.run(command, shell=True, executable='/bin/bash') # run command in bash shell
     
     # Get subject list from subject folder names
