@@ -69,7 +69,7 @@ fsf_fn = '/holland/Desktop/evo_lower_level.fsf' # /path/to/FeatFileName.fsf
 #         nifti_output = f'{subdir}/session_{session}/run_1/{nifti_out}' # path to nifti output file
 #         cmd[0] = f'wb_command -cifti-convert -to-nifti {cifti_input} {nifti_output}'
 
-
+# %% Create ROI mask from parcellated cifti files
 
       
         
