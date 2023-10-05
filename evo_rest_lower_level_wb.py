@@ -54,7 +54,7 @@ rois = ['L_rACC']
 q = fmri_tools(datadir)
 sessions = ['1','2']
 
-fsf_fn = '/holland/Desktop/evo_lower_level.fsf' # /path/to/FeatFileName.fsf
+# fsf_fn = '/holland/Desktop/evo_lower_level.fsf' # /path/to/FeatFileName.fsf
 # feat_outdir = 'lower_level_remean.feat' # name of the output directory
 
 
