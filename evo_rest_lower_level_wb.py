@@ -2,14 +2,14 @@
 
 # Holland Brown
 
-# Updated 2023-10-07
+# Updated 2023-10-05
 # Created 2023-09-22
 
 # Next:
     # add read_json function to my_imaging_tools module (started)
     # decide whether to use wb_command -cifti-average-roi-correlation or Feat GLM for lower levels
     # add step to produce a spec/scene file for easy visualization
-
+    # see ctx-rh-medialorbitofrontal -> https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/AnatomicalROI/FreeSurferColorLUT
 """
 Consider this procedure...
 https://www.mail-archive.com/hcp-users@humanconnectome.org/msg04539.html
