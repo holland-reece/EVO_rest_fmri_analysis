@@ -78,7 +78,14 @@ sessions = ['1','2']
 
 # wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_LEFT out.func.gii
 # 
-# # wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT out.func.gii 
+# # wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT out.func.gii
+
+cmd = [None]*3 # allocate memory for commands
+for sub in tqdm(q.subs):
+    for roi in rois:
+        for session in sessions:
+            cmd[0] = f'wb_command -cifti-separate {in}.dtseries.nii COLUMN -metric CORTEX_LEFT {out}.func.gii'
+            cmd[1] = f'wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT {out}.func.gii'
 
 
 # %% Create ROI mask from parcellated cifti files
