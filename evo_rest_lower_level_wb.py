@@ -74,6 +74,13 @@ sessions = ['1','2']
 #         nifti_output = f'{subdir}/session_{session}/run_1/{nifti_out}' # path to nifti output file
 #         cmd[0] = f'wb_command -cifti-convert -to-nifti {cifti_input} {nifti_output}'
 
+# %% Separate CIFTI files into surface (GIFTI/greyordinate) and subcortical (NIFTI/volumetric) data
+
+# wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_LEFT out.func.gii
+# 
+# # wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT out.func.gii 
+
+
 # %% Create ROI mask from parcellated cifti files
 
       
