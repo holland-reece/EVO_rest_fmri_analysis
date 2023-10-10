@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-05
+# Updated 2023-10-10
 # Created 2023-09-22
 
 # Next:
@@ -10,6 +10,9 @@
     # decide whether to use wb_command -cifti-average-roi-correlation or Feat GLM for lower levels
     # add step to produce a spec/scene file for easy visualization
     # see ctx-rh-medialorbitofrontal -> https://surfer.nmr.mgh.harvard.edu/fswiki/FsTutorial/AnatomicalROI/FreeSurferColorLUT
+    # Schaefer/Yeo CorticalParcellation with FreeSurfer -> (jrnlart) https://surfer.nmr.mgh.harvard.edu/fswiki/CorticalParcellation_Yeo2011 ; (github repo) https://github.com/ThomasYeoLab/CBIG/tree/master/stable_projects/brain_parcellation/Schaefer2018_LocalGlobal
+
+
 """
 Consider this procedure...
 https://www.mail-archive.com/hcp-users@humanconnectome.org/msg04539.html
@@ -42,6 +45,8 @@ x correlation_${sub}_average.dscalar.nii
 import os
 import tqdm
 import json
+import numpy as np
+import nibabel as nib
 from my_imaging_tools import fmri_tools
 # from nipype import Node, Function
 # from nipype.interfaces.workbench.cifti import WBCommand
