@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-10
+# Updated 2023-10-11
 # Created 2023-09-22
 
 # Next:
@@ -76,16 +76,18 @@ sessions = ['1','2']
 
 # %% Separate CIFTI files into surface (GIFTI/greyordinate) and subcortical (NIFTI/volumetric) data
 
-# wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_LEFT out.func.gii
-# 
-# # wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT out.func.gii
-
 cmd = [None]*3 # allocate memory for commands
 for sub in tqdm(q.subs):
     for roi in rois:
         for session in sessions:
-            cmd[0] = f'wb_command -cifti-separate {in}.dtseries.nii COLUMN -metric CORTEX_LEFT {out}.func.gii'
-            cmd[1] = f'wb_command -cifti-separate in.dtseries.nii COLUMN -metric CORTEX_RIGHT {out}.func.gii'
+            workingdir = f'{datadir}/{sub}/func/rest/session_{session}/run_1'
+            inputL = f'{workingdir}/'
+            inputR = f'{workingdir}/'
+            outputL = f'{workingdir}/'
+            outputR = f'{workingdir}/'
+            cmd[0] = f'wb_command -cifti-separate {inputL}.dtseries.nii COLUMN -metric CORTEX_LEFT {outputL}.func.gii'
+            cmd[1] = f'wb_command -cifti-separate {inputR}.dtseries.nii COLUMN -metric CORTEX_RIGHT {outputR}.func.gii'
+            q.exec_cmds(cmd)
 
 
 # %% Create ROI mask from parcellated cifti files
