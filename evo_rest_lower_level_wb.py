@@ -47,6 +47,7 @@ import tqdm
 import json
 import numpy as np
 import nibabel as nib
+import nilearn as nil
 from my_imaging_tools import fmri_tools
 # from nipype import Node, Function
 # from nipype.interfaces.workbench.cifti import WBCommand
@@ -75,6 +76,7 @@ sessions = ['1','2']
 #         cmd[0] = f'wb_command -cifti-convert -to-nifti {cifti_input} {nifti_output}'
 
 # %% Separate CIFTI files into surface (GIFTI/greyordinate) and subcortical (NIFTI/volumetric) data
+# NOTE: Glasser atlas is already separated into GIFTIs
 
 cmd = [None]*3 # allocate memory for commands
 for sub in tqdm(q.subs):
@@ -90,7 +92,10 @@ for sub in tqdm(q.subs):
             q.exec_cmds(cmd)
 
 
-# %% Create ROI mask from parcellated cifti files
+# %% Create ROI mask from atlas
+from nilearn import datasets
+
+datasets.fetch_atlas_harvard_oxford
 
       
         
