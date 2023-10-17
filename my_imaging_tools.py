@@ -28,7 +28,7 @@ class fmri_tools:
 
     # Run commands in system terminal
     def exec_cmds(self, commands):
-        for command in tqdm(commands):
+        for command in commands:
             subprocess.run(command, shell=True, executable='/bin/bash') # run command in bash shell
     
     # Get subject list from subject folder names
