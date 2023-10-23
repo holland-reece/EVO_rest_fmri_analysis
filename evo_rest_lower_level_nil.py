@@ -2,12 +2,12 @@
 
 # Holland Brown
 
-# Updated 2023-10-20
+# Updated 2023-10-23
 # Created 2023-09-22
 
 # Next:
     # add read_json function to my_imaging_tools module (started)
-    # figure out how to combine Glasser parcels into our ROIs
+    # troubleshoot mismatched dimensions between func data and ROI masks
 
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -80,7 +80,7 @@ for sub in q.subs:
     for session in sessions:
         subject_roidir = f'{datadir}/{sub}/func/rois/{roi}'
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-        cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii -method MEAN'
+        cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii -method MEAN' # dimensions should be 404 (number of timepoints) by 1
         q.exec_cmds(cmd)
 
 # %% Use nilearn and nibabel to correlate the average ROI time series with the whole-brain resting-state data
@@ -92,7 +92,7 @@ sessions=['1']
 
 for sub in q.subs:
     for session in sessions:
-        func_dtseries = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+        func_dtseries = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii' # use parcellated func (.psteries.nii) instead?
         subject_roidir = f'{datadir}/{sub}/func/rois/{roi}'
         roi_avg = f'{subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii'
 
@@ -104,13 +104,18 @@ for sub in q.subs:
         roi_img = nib.load(roi_avg)
         roi_ts = roi_img.get_fdata()#.squeeze() # reduce array dimensions
 
-        # Check that time series data are properly aligned with each other temporally
+        # Check that time series data have same size along 0 dimension (number of rows)
         print(func_data.shape[1] == roi_ts.shape[0])
 
         # Calculate correlation of ROI with func time series, voxel by voxel
         corr_map = np.zeros(func_data.shape[0]) # init array to store corr matrix elements
         for vox in range(func_data.shape[0]):
-            vox_ts = func_data[vox, :] # extract time series for current voxel(
+            vox_ts = func_data[vox, :] # extract time series for current voxel
+            print(func_data.shape[0])
+            print(vox_ts.shape[0])
+            print(roi_ts.shape[0])
+
+            # FIX: dimensions of roi_ts, vox_ts don't match!!!
             corr,_ = stats.pearsonr(roi_ts, vox_ts) # calculate Pearson R corr coeff for this voxel ts and avg ROI ts
             corr_map[vox] = corr
 
