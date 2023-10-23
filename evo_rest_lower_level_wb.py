@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-18
+# Updated 2023-10-20
 # Created 2023-09-22
 
 # Next:
@@ -98,43 +98,46 @@ for p in cifti_roi_args:
 
 
 # %% Use binary ROI mask for roi-to-wholebrain analysis
-rois = ['L_MFG']
+roi = 'L_MFG'
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
+roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
 
-cmd = [None]*3
+cmd = [None]*2
 for sub in q.subs:
     for session in sessions:
-        for roi in rois:
-            func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-            roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
-            sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
-            if os.path.isdir(sub_roidir)==False:
-                q.create_dirs(sub_roidir)
+        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+        sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
+        if os.path.isdir(sub_roidir)==False:
+            q.create_dirs(sub_roidir)
 
-            # parcellate subject's preprocessed functional data
-            # cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
-            cmd[0] = f'wb_command -cifti-parcellate {func_in} {roi_bin} COLUMN {sub_roidir}/{sub}_{roi}_S{session}_R1.ptseries.nii -nonempty-mask-out {sub_roidir}/{sub}_{roi}_S{session}_R1.pscalar.nii'
-            # func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
-            # roi_bin = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_bin.pscalar.nii'
-            
-            # take average of func time series in the ROI
-            # cmd[0] = f'wb_command -cifti-roi-average ${subject}_${run}.dtseries.nii roi_data_${sub}_${run}_unsmoothed.txt -vol-roi ${sub}_roi_mask.nii'
-            cmd[1] = f'wb_command -cifti-roi-average {func_in} {sub_roidir}/{sub}_{roi}_S{session}_R1_mean.dscalar.nii -cifti-roi {roi_bin}'
+        # parcellate subject's preprocessed functional data
+        # cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
+        # cmd[0] = f'wb_command -cifti-parcellate {func_in} {roi_bin} COLUMN {sub_roidir}/{sub}_{roi}_S{session}_R1.ptseries.nii -nonempty-mask-out {sub_roidir}/{sub}_{roi}_S{session}_R1.pscalar.nii'
+        # func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
+        # roi_bin = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_bin.pscalar.nii'
 
-            # convert roi text file to dscalar
-            # cmd[2] = f'wb_command -cifti-create-scalar-series {roidir}/{roi}_S{session}_R1_mean.dscalar.nii {roidir}/{roi}_S{session}_R1_mean.dscalar.nii -transpose -series SECOND 0 1'
+        # extract average ROI time series from functional data
+        cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {sub_roidir}/{roi}_S{session}_R1_meants.ptseries.nii -method MEAN'
+        
+        # take average of func time series in the ROI
+        # cmd[0] = f'wb_command -cifti-roi-average ${subject}_${run}.dtseries.nii roi_data_${sub}_${run}_unsmoothed.txt -vol-roi ${sub}_roi_mask.nii'
+        # cmd[0] = f'wb_command -cifti-roi-average {func_in} {sub_roidir}/{sub}_{roi}_S{session}_R1_mean.dscalar.nii -cifti-roi {roi_bin}'
+        cmd[1] = f'wb_command -cifti-cross-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_meants.ptseries.nii {sub_roidir}/{roi}_S{session}_R1_rscorr.dtseries.nii'
 
-            # get correlation of average ROI time series with time series of every voxel in the brain
-            cmd[2] = f'wb_command -cifti-correlation {func_in} {roidir}/{sub}_{roi}_S{session}_R1_wholebrain_corr.dconn.nii -cifti-roi {roidir}/{sub}_{roi}_S{session}_R1_mean.dscalar.nii'
+        # convert roi text file to dscalar
+        # cmd[2] = f'wb_command -cifti-create-scalar-series {roidir}/{roi}_S{session}_R1_mean.dscalar.nii {roidir}/{roi}_S{session}_R1_mean.dscalar.nii -transpose -series SECOND 0 1'
 
-            # convert to z-scores
-            # cmd[2] = f'wb_command -cifti-math "atanh(r)" {roidir}/{roi}_S{session}_R1_wholebrain_corr_zscore.dconn.nii -var "r" {roidir}/{roi}_S{session}_R1_wholebrain_corr.dconn.nii'
+        # get correlation of average ROI time series with time series of every voxel in the brain
+        # cmd[1] = f'wb_command -cifti-correlation {func_in} {roidir}/{sub}_{roi}_S{session}_R1_wholebrain_corr.dconn.nii -cifti-roi {roidir}/{sub}_{roi}_S{session}_R1_mean.dscalar.nii'
 
-            # filter by significance of p < 0.05
-            # cmd[4] = f'wb_command -metric-math "(p < 0.05)" {roidir}/{roi}_S{session}_R1_wholebrain_corr_zscore_significant.func.gii -var "p" statistical_map.func.gii'
+        # convert to z-scores
+        # cmd[2] = f'wb_command -cifti-math "atanh(r)" {roidir}/{roi}_S{session}_R1_wholebrain_corr_zscore.dconn.nii -var "r" {roidir}/{roi}_S{session}_R1_wholebrain_corr.dconn.nii'
 
-            q.exec_cmds(cmd)
+        # filter by significance of p < 0.05
+        # cmd[4] = f'wb_command -metric-math "(p < 0.05)" {roidir}/{roi}_S{session}_R1_wholebrain_corr_zscore_significant.func.gii -var "p" statistical_map.func.gii'
+
+        q.exec_cmds(cmd)
             
 
 # %% Cross-correlate this new ROI timeseries cifti with the smoothed whole-brain cifti data
