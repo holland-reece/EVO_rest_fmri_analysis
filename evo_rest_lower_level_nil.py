@@ -27,8 +27,6 @@ from my_imaging_tools import fmri_tools
 
 datadir = f'/home/holland/Desktop/EVO_TEST/subjects' # where subject folders are located
 atlasdir = f'/home/holland/Desktop/EVO_TEST/Glasser_et_al_2016_HCP_MMP1.0_kN_RVVG/HCP_PhaseTwo/Q1-Q6_RelatedValidation210/MNINonLinear/fsaverage_LR32k' # where HCP MMP1.0 files are located (downloaded from BALSA)
-
-
 atlas_labels = f'{atlasdir}/Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii' # HCP MMP1.0 parcel labels (either *.dlabel.nii or *.dscalar.nii files)
 
 q = fmri_tools(datadir)
@@ -76,14 +74,21 @@ for p in cifti_roi_args:
     q.exec_cmds(command)
 
 # %% Extract average ROI time series from functional data using wb_command
+roidir = f'{studydir}/{roi}'
+roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
+
+cmd=[None]
 for sub in q.subs:
     for session in sessions:
         subject_roidir = f'{datadir}/{sub}/func/rois/{roi}'
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+
         cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii -method MEAN' # dimensions should be 404 (number of timepoints) by 1
         q.exec_cmds(cmd)
 
 # %% Use nilearn and nibabel to correlate the average ROI time series with the whole-brain resting-state data
+from nilearn.input_data import NiftiLabelsMasker
+
 roi = 'L_MFG'
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
@@ -94,34 +99,43 @@ for sub in q.subs:
     for session in sessions:
         func_dtseries = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii' # use parcellated func (.psteries.nii) instead?
         subject_roidir = f'{datadir}/{sub}/func/rois/{roi}'
-        roi_avg = f'{subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii'
+        # roi_avg = f'{subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii'
 
         # Load subject preprocessed functional data
         func_img = nib.load(func_dtseries)
         func_data = func_img.get_fdata()
 
         # Load subject average ROI time series
-        roi_img = nib.load(roi_avg)
-        roi_ts = roi_img.get_fdata()#.squeeze() # reduce array dimensions
+        # roi_img = nib.load(roi_avg)
+        # roi_ts = roi_rimg.get_fdata()
+
+        # Load generalized binary ROI mask
+        roi_bin_img = nib.load(roi_bin)
+        masker = NiftiLabelsMasker(labels_img=roi_bin_img, standardize=True) # z-score standardize the time series of each roi label
+        #roi_ts = roi_ts.squeeze() # reduce array dimensions -> didn't change dimensions (???)
+
+        roi_ts = masker.fit_transform(func_img)
+        avg_roi_ts = np.mean(roi_ts,axis=1)
+        np.savetxt(avg_roi_ts, f'{subject_roidir}/{roi}_S{session}_R1_avg_roi_ts.txt')
 
         # Check that time series data have same size along 0 dimension (number of rows)
-        print(func_data.shape[1] == roi_ts.shape[0])
+        # print(func_data.shape[1] == roi_ts.shape[0])
 
         # Calculate correlation of ROI with func time series, voxel by voxel
-        corr_map = np.zeros(func_data.shape[0]) # init array to store corr matrix elements
-        for vox in range(func_data.shape[0]):
-            vox_ts = func_data[vox, :] # extract time series for current voxel
-            print(func_data.shape[0])
-            print(vox_ts.shape[0])
-            print(roi_ts.shape[0])
+        # corr_map = np.zeros(func_data.shape[0]) # init array to store corr matrix elements
+        # for vox in range(func_data.shape[0]):
+        #     vox_ts = func_data[vox, :] # extract time series for current voxel
+        #     print(func_data.shape[1])
+        #     print(vox_ts.shape[0])
+        #     print(roi_ts.shape[0])
 
-            # FIX: dimensions of roi_ts, vox_ts don't match!!!
-            corr,_ = stats.pearsonr(roi_ts, vox_ts) # calculate Pearson R corr coeff for this voxel ts and avg ROI ts
-            corr_map[vox] = corr
+        #     # FIX: dimensions of roi_ts, vox_ts don't match!!!
+        #     corr,_ = stats.pearsonr(roi_ts, vox_ts) # calculate Pearson R corr coeff for this voxel ts and avg ROI ts
+        #     corr_map[vox] = corr
 
         # Save corr matrix as a NIFTI file
-        corr_img = nib.NiftiImage(corr_map, affine=func_img.affine)
-        nib.save(corr_img, f'{subject_roidir}/{roi}_S{session}_R1_corr_map.nii.gz')
+        # corr_img = nib.NiftiImage(corr_map, affine=func_img.affine)
+        # nib.save(corr_img, f'{subject_roidir}/{roi}_S{session}_R1_corr_map.nii.gz')
 
 # %% Plot the correlation matrix
 from nilearn import plotting as plt
