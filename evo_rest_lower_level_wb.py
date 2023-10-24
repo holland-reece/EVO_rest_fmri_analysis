@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-20
+# Updated 2023-10-24
 # Created 2023-09-22
 
 # Next:
@@ -96,6 +96,35 @@ for p in cifti_roi_args:
     command[0] = f'mv {p} {parc_dir}'
     q.exec_cmds(command)
 
+
+# %% 2023-10-24 TEST: Use binary ROI mask for roi-to-wholebrain analysis
+roi = 'L_MFG'
+parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
+
+studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
+roidir = f'{studydir}/{roi}'
+# roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
+
+if os.path.isfile(f'{roidir}/{roi}_parcs.txt')==False:
+    parcelstxt = open(f'{roidir}/{roi}_parcs.txt','w')
+    for p in parcels:
+        parcelstxt.write(p)
+roi_parcs_txt = f'{roidir}/{roi}_parcs.txt'
+
+cmd = [None]*2
+for sub in q.subs:
+    for session in sessions:
+        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+        # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_s1.7_parc.ptseries.nii'
+        roi_ts_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_ts.dtseries.nii'
+        sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
+        if os.path.isdir(sub_roidir)==False:
+            q.create_dirs(sub_roidir)
+
+        cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} ROW -target-roi {roi_parcs_txt} -method MEAN {roi_ts_out}'
+        q.exec_cmds(cmd)
+
+        
 
 # %% Use binary ROI mask for roi-to-wholebrain analysis
 roi = 'L_MFG'
