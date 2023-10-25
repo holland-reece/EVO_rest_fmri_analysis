@@ -21,9 +21,7 @@ wb_command -cifti-create-scalar-series roi_data_${sub}_${run}_unsmoothed.txt
 roi_data_${sub}_${run}_unsmoothed.dscalar.nii -transpose -series SECOND 0 1
 3) Cross-correlate this new ROI timeseries cifti with the smoothed whole-brain 
 cifti data:
-wb_command -cifti-cross-correlation ${subject}_${run}_smoothed.dtseries.nii 
-roi_data_${sub}_${run}_unsmoothed.dscalar.nii 
-correlation_${sub}_${run}.dscalar.nii
+wb_command -cifti-cross-correlation ${subject}_${run}_smoothed.dtseries.nii roi_data_${sub}_${run}_unsmoothed.dscalar.nii correlation_${sub}_${run}.dscalar.nii
 4) Repeat for all runs and average:
 wb_command -cifti-average correlation_${sub}_average.dscalar.nii -cifti 
 correlation_${sub}_run1.dscalar.nii -cifti correlation_${sub}_run2.dscalar.nii 
@@ -57,17 +55,18 @@ sessions = ['1','2']
 
 
 # %% Create ROI mask from HCP-MMP1.0 atlas (not subject-specific)
-roi = 'R_MFG' # one ROI, left or right, at a time
+roi = 'L_MFG' # one ROI, left or right, at a time
 
 # names of HCP-MMP1.0 parcels for ROI
-# parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
-parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
+parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
+# parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
 
 command = [None]
 cmd = [None]
 
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
+
 
 if os.path.isdir(studydir)==False:
     q.create_dirs(studydir)
@@ -99,29 +98,67 @@ for p in cifti_roi_args:
 
 # %% 2023-10-24 TEST: Use binary ROI mask for roi-to-wholebrain analysis
 roi = 'L_MFG'
-parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
+roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
+
+my_atlas_labels = f'{atlasdir}/Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors_HRB.32k_fs_LR.dlabel.nii'
 
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
 # roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
 
-if os.path.isfile(f'{roidir}/{roi}_parcs.txt')==False:
-    parcelstxt = open(f'{roidir}/{roi}_parcs.txt','w')
-    for p in parcels:
-        parcelstxt.write(p)
 roi_parcs_txt = f'{roidir}/{roi}_parcs.txt'
+if os.path.isfile(roi_parcs_txt)==False:
+    parcelstxt = open(roi_parcs_txt,'w')
+    for p in roi_parcels:
+        parcelstxt.write(f'{p}\n')
+    parcelstxt.close()
+# parcelstxt = open(roi_parcs_txt, 'r')
+# roi_parcs_ls = parcelstxt.readlines()
+# parcelstxt.close()
 
-cmd = [None]*2
+cmd = [None]*5
+command=[None]
 for sub in q.subs:
     for session in sessions:
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-        # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_s1.7_parc.ptseries.nii'
-        roi_ts_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_ts.dtseries.nii'
+        # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_s1.7_parc.ptseries.nii'
+
         sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
+        roi_ts_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii'
+        
         if os.path.isdir(sub_roidir)==False:
             q.create_dirs(sub_roidir)
 
-        cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} ROW -target-roi {roi_parcs_txt} -method MEAN {roi_ts_out}'
+        # resample the subject's functional data to the HCP MMP1.0 atlas space
+        command[0] = f'wb_command -cifti-resample {func_in} COLUMN {my_atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {datadir}/{sub}/func/rois/denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'#_HCP_MMP1_atlas_resampled.dlabel.nii'
+        resampled_func = f'{datadir}/{sub}/func/rois/denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'
+        q.exec_cmds(command)
+
+        # create binary ROI mask for each HCP-MMP1.0 parcel
+        for p in roi_parcels:
+            command[0] = f'wb_command -cifti-label-to-roi {my_atlas_labels} {roidir}/{roi}_{p}.dscalar.nii -name {p}'
+            q.exec_cmds(command)
+
+        # concatenate parcel masks into one ROI mask, then binarize
+        cifti_roi_args = glob.glob(f'{roidir}/{roi}_*.dscalar.nii')
+        cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
+
+        # average the ROI time series from the functional dense time series
+        cmd[1] = f'wb_command -cifti-roi-average {resampled_func} {roi_ts_out} -cifti-roi {roidir}/{roi}_bin.dscalar.nii'
+
+        # convert the ROI ts text file into a dense scalar file
+        # cmd[2] = f'wb_command -cifti-create-scalar-series {roi_ts_out} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii -transpose -series SECOND 0 1'
+
+        # cross-correlate ROI mean ts with whole-brain func data
+        # cmd[3] = f'wb_command -cifti-cross-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation.dscalar.nii'
+        cmd[2] = f'wb_command -cifti-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation_v2.dscalar.nii -roi-override -cifti-roi {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii'
+
+        # Fisher-z-score the correlation matrix
+        cmd[3] = f'wb_command -cifti-math "atanh(x)" {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation__fisherZ_v2.dscalar.nii -var x {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation_v2.dscalar.nii'
+
+        # also compute covariance matrix
+        cmd[4] = f'wb_command -cifti-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_covariance.dscalar.nii -roi-override -cifti-roi {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii -covariance'
+
         q.exec_cmds(cmd)
 
         
@@ -167,12 +204,6 @@ for sub in q.subs:
         # cmd[4] = f'wb_command -metric-math "(p < 0.05)" {roidir}/{roi}_S{session}_R1_wholebrain_corr_zscore_significant.func.gii -var "p" statistical_map.func.gii'
 
         q.exec_cmds(cmd)
-            
-
-# %% Cross-correlate this new ROI timeseries cifti with the smoothed whole-brain cifti data
-# wb_command -cifti-cross-correlation ${subject}_${run}_smoothed.dtseries.nii 
-# roi_data_${sub}_${run}_unsmoothed.dscalar.nii 
-# correlation_${sub}_${run}.dscalar.nii
 
 
 # %% ROI-to-wholebrain correlation
@@ -211,7 +242,6 @@ wb_command -cifti-average-roi-correlation
 
 # %% Fisher z-score the data
 
-# wb_command -cifti-math "atanh(x)" z_correlation_${sub}_average.dscalar.nii -var 
-# x correlation_${sub}_average.dscalar.nii
+# wb_command -cifti-math "atanh(x)" z_correlation_${sub}_average.dscalar.nii -var x correlation_${sub}_average.dscalar.nii
 
 # %%
