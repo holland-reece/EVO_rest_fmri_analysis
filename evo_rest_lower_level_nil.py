@@ -87,14 +87,20 @@ for sub in q.subs:
         q.exec_cmds(cmd)
 
 # %% Use nilearn and nibabel to correlate the average ROI time series with the whole-brain resting-state data
-# from nilearn.input_data import NiftiLabelsMasker
-from nilearn import plotting, input_data
+from nilearn import plotting, input_data, surface
+from nilearn.input_data import NiftiLabelsMasker
+
+def extract_roi_ts_surf(surf_in, atlaslabels, roi_label):
+    roi_mask = (atlaslabels == roi_label) # mask is every vertex where atlas labels and roi match
+    roi_ts = surf_in[roi_mask].mean(axis=0)
+    return roi_ts
 
 roi = 'L_MFG'
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
 roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
 sessions=['1']
+roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # HCP MMP1.0 parcels that make up our ROI
 
 for sub in q.subs:
     for session in sessions:
@@ -103,18 +109,16 @@ for sub in q.subs:
         # roi_avg = f'{subject_roidir}/{roi}_S{session}_R1_meants.ptseries.nii'
 
         # Load subject preprocessed functional data
-        func_img = nib.load(func_dtseries)
-        # func_data = func_img.get_fdata()
+        func_cifti = surface.load_surf_data(func_dtseries)
+        func_data = func_cifti.get_fdata()
+
+        for parc in roi_parcels:
+            roi_time_series = extract_roi_ts_surf(func_data, atlas_labels, parc)
+            roi_txt = open(f'{subject_roidir}/{roi}_S{session}_R1_aggr_s1.7_meants.txt', 'w')
+            roi_txt.write(roi_time_series)
+            roi_txt.close()
         
 
-        # Load generalized binary ROI mask
-        roi_bin_img = nib.load(roi_bin)
-        # masker = NiftiLabelsMasker(labels_img=roi_bin_img, standardize=True) # z-score standardize the time series of each roi label
-        #roi_ts = roi_ts.squeeze() # reduce array dimensions -> didn't change dimensions (???)
-
-        roi_ts = masker.fit_transform(func_img)
-        avg_roi_ts = np.mean(roi_ts,axis=1)
-        np.savetxt(avg_roi_ts, f'{subject_roidir}/{roi}_S{session}_R1_avg_roi_ts.txt')
 
 
 
