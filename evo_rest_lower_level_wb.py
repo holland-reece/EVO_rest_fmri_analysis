@@ -6,8 +6,10 @@
 # Created 2023-09-22
 
 # Next:
-    # add read_json function to my_imaging_tools module (started)
-    # figure out how to combine Glasser parcels into our ROIs
+    # got -cifti-cross-correlate to produce correlation matrix; now, need -cifti-correlate version to work (dimension mismatch)
+        # -cifti-cross-correlate produces map of correlation of every row of the ROI with every row of the func data
+        # need -cifti-correlate version, which produces map of correlation between whole ROI and ever row of func data
+    # also need to figure out how to z-score output (wb_command only offers a way to Fisher-z-score the output)
 
 """
 Consider this procedure...
