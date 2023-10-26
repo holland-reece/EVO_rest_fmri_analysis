@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-24
+# Updated 2023-10-26
 # Created 2023-09-22
 
 # Next:
@@ -103,10 +103,12 @@ roi = 'L_MFG'
 roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
 
 my_atlas_labels = f'{atlasdir}/Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors_HRB.32k_fs_LR.dlabel.nii'
+L_atlas_surf = f'{atlasdir}/Q1-Q6_RelatedValidation210.L.flat.32k_fs_LR.surf.gii'
+R_atlas_surf = f'{atlasdir}/Q1-Q6_RelatedValidation210.R.flat.32k_fs_LR.surf.gii'
 
 studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
 roidir = f'{studydir}/{roi}'
-# roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
+roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
 
 roi_parcs_txt = f'{roidir}/{roi}_parcs.txt'
 if os.path.isfile(roi_parcs_txt)==False:
@@ -118,48 +120,68 @@ if os.path.isfile(roi_parcs_txt)==False:
 # roi_parcs_ls = parcelstxt.readlines()
 # parcelstxt.close()
 
-cmd = [None]*5
+cmd = [None]*6
 command=[None]
+maskcmd=[None]*3
 for sub in q.subs:
     for session in sessions:
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
         # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_s1.7_parc.ptseries.nii'
 
         sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
-        roi_ts_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii'
+        # resampled_func = f'{datadir}/{sub}/func/rois/{roi}_bin_resampled2func.dscalar.nii'#denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'
+        resampled_func = func_in
+        roi_ts_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_meants.dscalar.nii'
+        corrmat_out = f'{sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_wholebrain'
+        resampled_atlas = f'{datadir}/{sub}/func/resampled_Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii'
         
         if os.path.isdir(sub_roidir)==False:
             q.create_dirs(sub_roidir)
 
+        # resample binary mask to participant's func data
+        # See: https://www.mail-archive.com/hcp-users@humanconnectome.org/msg06378.html
+        # maskcmd[0] = f''
+
+
         # resample the subject's functional data to the HCP MMP1.0 atlas space
-        command[0] = f'wb_command -cifti-resample {func_in} COLUMN {my_atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {datadir}/{sub}/func/rois/denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'#_HCP_MMP1_atlas_resampled.dlabel.nii'
-        resampled_func = f'{datadir}/{sub}/func/rois/denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'
+        # command[0] = f'wb_command -cifti-resample {roi_bin} COLUMN {func_in} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'#_HCP_MMP1_atlas_resampled.dlabel.nii'
+        command[0] = f'wb_command -cifti-resample {my_atlas_labels} COLUMN {func_in} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_atlas}'
         q.exec_cmds(command)
 
         # create binary ROI mask for each HCP-MMP1.0 parcel
         for p in roi_parcels:
-            command[0] = f'wb_command -cifti-label-to-roi {my_atlas_labels} {roidir}/{roi}_{p}.dscalar.nii -name {p}'
-            q.exec_cmds(command)
+            if os.path.isfile(f'{sub_roidir}/{roi}_{p}_resampled2func.dscalar.nii')==False:
+                command[0] = f'wb_command -cifti-label-to-roi {resampled_atlas} {sub_roidir}/{roi}_{p}_resampled2func.dscalar.nii -name {p}'
+                q.exec_cmds(command)
 
         # concatenate parcel masks into one ROI mask, then binarize
-        cifti_roi_args = glob.glob(f'{roidir}/{roi}_*.dscalar.nii')
-        cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
+        cifti_roi_args = glob.glob(f'{sub_roidir}/{roi}_*_resampled2func.dscalar.nii')
+        cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {sub_roidir}/{roi}_bin_resampled2func.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
 
         # average the ROI time series from the functional dense time series
-        cmd[1] = f'wb_command -cifti-roi-average {resampled_func} {roi_ts_out} -cifti-roi {roidir}/{roi}_bin.dscalar.nii'
+        cmd[1] = f'wb_command -cifti-roi-average {func_in} {sub_roidir}/{roi}_bin.dscalar.nii -cifti-roi {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_meants.txt'
 
         # convert the ROI ts text file into a dense scalar file
-        # cmd[2] = f'wb_command -cifti-create-scalar-series {roi_ts_out} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii -transpose -series SECOND 0 1'
+        cmd[2] = f'wb_command -cifti-create-scalar-series {roi_ts_out} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_meants.txt -transpose -series SECOND 0 1'
 
         # cross-correlate ROI mean ts with whole-brain func data
-        # cmd[3] = f'wb_command -cifti-cross-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation.dscalar.nii'
-        cmd[2] = f'wb_command -cifti-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation_v2.dscalar.nii -roi-override -cifti-roi {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii'
+        cmd[3] = f'wb_command -cifti-cross-correlation {func_in} {roi_ts_out} {corrmat_out}_crosscorrmap.dscalar.nii'
+        # cmd[2] = f'wb_command -cifti-correlation {func_in} {corrmat_out}_corrmap.dscalar.nii -roi-override -cifti-roi {roi_ts_out}'
 
-        # Fisher-z-score the correlation matrix
-        cmd[3] = f'wb_command -cifti-math "atanh(x)" {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation__fisherZ_v2.dscalar.nii -var x {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_correlation_v2.dscalar.nii'
+        # compute Fisher-z-scored version of correlation matrix
+        cmd[4] = f'wb_command -cifti-math "atanh(x)" {corrmat_out}_corrmap_fisherZ.dscalar.nii -var x {corrmat_out}.dscalar.nii'
 
         # also compute covariance matrix
-        cmd[4] = f'wb_command -cifti-correlation {func_in} {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_covariance.dscalar.nii -roi-override -cifti-roi {sub_roidir}/{roi}_S{session}_R1_denoised_aggr_s1.7_resampled_meants.dscalar.nii -covariance'
+        # cmd[4] = f'wb_command -cifti-correlation {func_in} {corrmat_out}_covmap.dscalar.nii -roi-override -cifti-roi {roi_ts_out} -covariance'
+
+        # compute correlation matrix with "no-demean" option: compute dot product of each row and normalize by diagonal
+        cmd[5] = f'wb_command -cifti-correlation {func_in} {corrmat_out}_corrmap_no-demean.dscalar.nii -roi-override -cifti-roi {roi_ts_out} -no-demean'
+
+        # try -cifti-average-roi-correlation
+        # cmd[6] = f'wb_command -cifti-average-roi-correlation {func_in} {corrmat_out}_corrmap_v2.dscalar.nii'
+
+        # filter by significance of p < 0.05
+        # cmd[7] = f'wb_command -metric-math "(p < 0.05)" {corrmat_out}_corrmap_significant.dscalar.nii -var "p" statistical_map.func.gii'
 
         q.exec_cmds(cmd)
 
@@ -179,11 +201,7 @@ for sub in q.subs:
         if os.path.isdir(sub_roidir)==False:
             q.create_dirs(sub_roidir)
 
-        # parcellate subject's preprocessed functional data
-        # cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
-        # cmd[0] = f'wb_command -cifti-parcellate {func_in} {roi_bin} COLUMN {sub_roidir}/{sub}_{roi}_S{session}_R1.ptseries.nii -nonempty-mask-out {sub_roidir}/{sub}_{roi}_S{session}_R1.pscalar.nii'
-        # func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_parc.ptseries.nii'
-        # roi_bin = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_bin.pscalar.nii'
+        # resample binary mask to participant's func data
 
         # extract average ROI time series from functional data
         cmd[0] = f'wb_command -cifti-parcellate {func_in} {atlas_labels} COLUMN {sub_roidir}/{roi}_S{session}_R1_meants.ptseries.nii -method MEAN'
