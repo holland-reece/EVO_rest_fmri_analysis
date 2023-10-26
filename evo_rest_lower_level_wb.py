@@ -54,51 +54,10 @@ q = fmri_tools(datadir)
 sessions = ['1']
 
 
-# %% Create ROI mask from HCP-MMP1.0 atlas (not subject-specific)
-roi = 'L_MFG' # one ROI, left or right, at a time
-
-# names of HCP-MMP1.0 parcels for ROI
-parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
-# parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
-
-command = [None]
-cmd = [None]
-
-studydir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
-roidir = f'{studydir}/{roi}'
-
-
-if os.path.isdir(studydir)==False:
-    q.create_dirs(studydir)
-if os.path.isdir(roidir)==False:
-    q.create_dirs(roidir)
-
-# input_cifti = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-output_roi = f'{roidir}/{roi}'
-
-# create binary ROI mask from HCP-MMP1.0 parcels
-for p in parcels:
-    command[0] = f'wb_command -cifti-label-to-roi {atlas_labels} {output_roi}_parc_{p}.dscalar.nii -name {p}'
-    q.exec_cmds(command)
-
-# concatenate parcels into one ROI mask, then binarize
-cifti_roi_args = glob.glob(f'{roidir}/{roi}_parc*.dscalar.nii')
-
-# cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3 + mask4 + mask5 + mask6) > 0' {output_roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]} -var 'mask4' {cifti_roi_args[3]} -var 'mask5' {cifti_roi_args[4]} -var 'mask6' {cifti_roi_args[5]}"
-cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {output_roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
-q.exec_cmds(cmd)
-
-# clean up ROI dir
-parc_dir = f'{roidir}/{roi}_HCP_MMP1_parcels'
-q.create_dirs(parc_dir)
-for p in cifti_roi_args:
-    command[0] = f'mv {p} {parc_dir}'
-    q.exec_cmds(command)
-
-
 # %% 2023-10-24 TEST: Use binary ROI mask for roi-to-wholebrain analysis
-roidir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks/{roi}'
 roi = 'L_rACC'
+roidir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks/{roi}'
+
 # roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG parcels from HCP MMP1.0 atlas labels
 # roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
 # roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC parcels from HCP MMP1.0 atlas labels
@@ -184,3 +143,34 @@ for sub in q.subs:
 
         q.exec_cmds(cmd)
 
+
+# %% Compute mask to only show activity in correlation maps that is within confidence interval
+import numpy as np
+import scipy.stats
+from nilearn import plotting, input_data, surface
+from nilearn.input_data import NiftiLabelsMasker
+
+def mean_confidence_interval(data, confidence=0.95):
+    a = 1.0 * np.array(data)
+    n = len(a) # length of data array
+    m, se = np.mean(a), scipy.stats.sem(a) # compute mean and standard error of the mean
+    h = se * scipy.stats.t.ppf((1 + confidence) / 2., n-1) # percent point function
+    return m, m-h, m+h
+
+roi = 'L_MFG'
+
+for sub in q.subs:
+    for session in sessions:
+        sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
+        crosscorr_dscalar = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_wholebrain_crosscorrmap.dscalar.nii'
+
+        # Load subject preprocessed functional data
+        crosscorr = surface.load_surf_data(crosscorr_dscalar)
+        corr_img = crosscorr.get_fdata()
+        
+
+# %% Plot the correlation matrix
+from nilearn import plotting as plt
+
+plt.plot_stat_map(corr_img, title=f"{roi}-to-Wholebrain Resting-State Correlation")
+plt.show()
