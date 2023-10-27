@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-26
+# Updated 2023-10-27
 # Created 2023-09-22
 
 # Next:
@@ -54,16 +54,17 @@ q = fmri_tools(datadir)
 sessions = ['1']
 
 
-# %% 2023-10-24 TEST: Use binary ROI mask for roi-to-wholebrain analysis
-roi = 'L_rACC'
+# %% Create binary ROI mask and compute roi-to-wholebrain cross-correlation maps
+roi = 'R_dACC'
 roidir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks/{roi}'
 
-# roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG parcels from HCP MMP1.0 atlas labels
-# roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG parcels from HCP MMP1.0 atlas labels
-# roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC parcels from HCP MMP1.0 atlas labels
-# roi_parcels = ['L_p24pr_ROI','L_33pr_ROI','L_a24pr_ROI'] # L_dACC parcels from HCP MMP1.0 atlas labels
-# roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC parcels from HCP MMP1.0 atlas labels
-roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC parcels from HCP MMP1.0 atlas labels
+# ROI parcel names from HCP MMP1.0 atlas labels
+# roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
+# roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
+roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC
+# roi_parcels = ['L_p24pr_ROI','L_33pr_ROI','L_a24pr_ROI'] # L_dACC
+# roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
+# roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
 # create ROI dir and parcels subdir, if needed
 if os.path.isdir(roidir)==False:
@@ -96,9 +97,9 @@ for sub in q.subs:
             q.create_dirs(sub_roidir)
 
         # resample the subject's functional data to the HCP MMP1.0 atlas space
-        # command[0] = f'wb_command -cifti-resample {roi_bin} COLUMN {func_in} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'#_HCP_MMP1_atlas_resampled.dlabel.nii'
-        command[0] = f'wb_command -cifti-resample {func_in} COLUMN {atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'
-        q.exec_cmds(command)
+        if os.path.isfile(resampled_func)==False:
+            command[0] = f'wb_command -cifti-resample {func_in} COLUMN {atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'
+            q.exec_cmds(command)
 
         # create binary ROI mask for each HCP-MMP1.0 parcel
         for p in roi_parcels:
@@ -108,8 +109,8 @@ for sub in q.subs:
 
         # concatenate parcel masks into one ROI mask, then binarize
         cifti_roi_args = glob.glob(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_*.dscalar.nii')
-        # cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
-        cmd[0] = f"wb_command -cifti-math '(mask1 + mask2) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]}"
+        cmd[0] = f"wb_command -cifti-math '(mask1 + mask2 + mask3) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
+        # cmd[0] = f"wb_command -cifti-math '(mask1 + mask2) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]}"
 
         # average the ROI time series from the functional dense time series
         cmd[1] = f'wb_command -cifti-roi-average {resampled_func} {roi_ts_out}.txt -cifti-roi {roidir}/{roi}_bin.dscalar.nii'
