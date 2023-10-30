@@ -1,3 +1,4 @@
+# Create binary ROI masks from volumetric ROI nifti file
 # Holland Brown
 
 # Updated 2023-10-25
