@@ -1,4 +1,4 @@
-# Brain Extraction with FSL BET
+# Brain Extraction with FSL BET: use this script to get masks for fieldmap preprocessing with Liston Multi-echo Pipeline
 
 # Holland Brown
 
