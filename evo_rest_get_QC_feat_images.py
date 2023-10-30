@@ -1,4 +1,4 @@
-# Visualize EVO lower-level analysis results
+# Get Feat lower level images: visualize EVO lower-level analysis results
 
 # Holland Brown
 
