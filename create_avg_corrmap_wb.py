@@ -23,7 +23,7 @@ sessions = ['1','2']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 #subs = q.read_temp_sublist_txt('/athena/victorialab/scratch/hob4003/study_EVO/NKI_subjectlist.txt')
 
-# %%
+# %% Create average ROI-wholebrain correlation maps for one site
 cmd=[None]
 for session in sessions:
     for roi in rois:
@@ -33,6 +33,25 @@ for session in sessions:
         # exclude_outliers_opt=f'-exclude-outliers <stddevs-below> <stddevs-above>'
         exclude_outliers_opt=f'' # don't exclude outliers from avg corrmap
         print(corr_maps)
+        for map in corr_maps:
+            cifti_list_str = f'{cifti_list_str} -cifti {map}'
+        cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
+        q.exec_cmds(cmd)
+
+# %% Create average ROI-wholebrain correlation maps across all sites
+sites = ['NKI','UW']
+corr_maps = []
+cmd=[None]
+for session in sessions:
+    for roi in rois:
+        cifti_list_str = ''
+        cifti_out = f'{scriptdir}/EVO_lower_level_avg_corrmaps/{roi}_S{session}_lowerlev_AllSitesAvg_corrmap.dscalar.nii'
+        for site in sites:
+            site_corr_maps = glob.glob(f'{scriptdir}/EVO_lower_level_avg_corrmaps/{roi}_S{session}_lowerlev_{site}avg_corrmap.dscalar.nii')
+            corr_maps.append(site_corr_maps)
+        # exclude_outliers_opt=f'-exclude-outliers <stddevs-below> <stddevs-above>'
+        exclude_outliers_opt=f'' # don't exclude outliers from avg corrmap
+        print(corr_maps) # NOTE: should be same number as number of sites
         for map in corr_maps:
             cifti_list_str = f'{cifti_list_str} -cifti {map}'
         cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
