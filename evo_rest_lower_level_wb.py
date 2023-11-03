@@ -65,9 +65,6 @@ for sub in q.subs:
             #     rest_info = json.load(rest_json)
             # TR = rest_info['RepetitionTime']
 
-            func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-            # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_s1.7_parc.ptseries.nii'
-
             sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
             resampled_func = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'
             # resampled_func = func_in
