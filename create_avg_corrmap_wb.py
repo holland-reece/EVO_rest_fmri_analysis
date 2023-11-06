@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-03
+# Updated 2023-11-06
 # Created 2023-11-03
 
 # NOTE: have to do mean of squares or mean of absolute values maps so negative correlations don't cancel out the positive ones
