@@ -16,13 +16,13 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
-# scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
-# wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
+datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
+scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
+wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized/{site}' # where subject folders are located
-scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
-wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
+# datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # where subject folders are located
+# scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
+# wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 grouplabels = f'' # path to csv with group labels
 
@@ -77,53 +77,39 @@ group_lists = [subs_group0,subs_group1]
 print(len(subs_group0))
 print(len(subs_group1))
 
-# %% Create average ROI-wholebrain correlation maps across all sites
-sites = ['NKI','UW']
-corr_maps = []
+# %% Create average ROI-wholebrain correlation maps by treatment condition group
 cmd=[None]
-
+group = ''
 for session in sessions:
     for roi in rois:
-        corr_maps = glob.glob(f'{datadir}/*/func/rois/{roi}/*_R1_denoised_aggr_s1.7_wholebrain_crosscorrmap.dscalar.nii')
+
+        # list all corr maps for this ROI and session
+        corr_maps = glob.glob(f'{datadir}/*_MRI_data/*/func/rois/{roi}/*S{session}*_R1_denoised_aggr_s1.7_wholebrain_crosscorrmap.dscalar.nii')
 
         for group_list in group_lists:
-            subs = group_list
-            if subs == subs_group0:
+
+            # get group name for output file name
+            if group_list == subs_group0:
                 group = 'BandTogether' # Tx group
-            elif subs == subs_group1:
+            elif group_list == subs_group1:
                 group = 'WORDS' # HC group
             print(group)
+            cifti_out = f'{scriptdir}/{roi}_{group}_S{session}_avgcorrmap.dscalar.nii'
 
-            cifti_list_str = ''
-
-            cifti_out = f'{scriptdir}/{roi}_{group}_S{session}_higherlev_corrmap.dscalar.nii'
-            for site in sites:
-                site_corr_maps = glob.glob(f'{scriptdir}/{roi}_S{session}_lowerlev_{site}avg_corrmap.dscalar.nii')
-                for s in site_corr_maps:
-                    corr_maps.append(s)
             # exclude_outliers_opt=f'-exclude-outliers <stddevs-below> <stddevs-above>'
             exclude_outliers_opt=f'' # don't exclude outliers from avg corrmap
-            # print(corr_maps) # NOTE: should be same number as number of sites
-            for map in corr_maps:
-                cifti_list_str = f'{cifti_list_str} -cifti {map}'
-            cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
-            q.exec_cmds(cmd)
 
-
-            cifti_out = f'{scriptdir}/EVO_lower_level_avg_corrmaps/{roi}_S{session}_lowerlev_{site}avg_corrmap.dscalar.nii'
-            
-            # exclude_outliers_opt=f'-exclude-outliers <stddevs-below> <stddevs-above>'
-            exclude_outliers_opt=f'' # don't exclude outliers from avg corrmap
-            
+            # list only corr maps that are in this condition group            
             group_corr_maps = []
-            for sub in subs:
+            for sub in group_list:
                 for map in corr_maps:
                     if sub in map:
                         group_corr_maps.append(map)
-            print(len(group_corr_maps))
+            print(f'Number of {group} corrmaps averaged: {len(group_corr_maps)}')
 
+            # craft command string, then execute
+            cifti_list_str = ''
             for map in group_corr_maps:
                 cifti_list_str = f'{cifti_list_str} -cifti {map}'
-                cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
-                q.exec_cmds(cmd)
-# %%
+            cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
+            q.exec_cmds(cmd)
