@@ -1,4 +1,4 @@
-# EVO Lower-level ROI analysis: Make Avg CorrMap
+# EVO Higher-Level ROI Analysis: Create Average Correlation Maps
 
 # Holland Brown
 
@@ -6,10 +6,10 @@
 # Created 2023-11-03
 
 # Need condition group assignment label for each subject
-# Format labels in two text files, which code iterates through simultaneously to get subject group labels:
-    # (1) subjects to be included in higher levels
-    # (2) group assignments as 0 (EVO) or 1 (HC), in same order as subject list
-# I created these lists by copying columns from an Excel spreadsheet into text files
+    # Format labels in two text files, which code iterates through simultaneously to get subject group labels:
+        # (1) subjects to be included in higher levels
+        # (2) group assignments as 0 (EVO) or 1 (HC), in same order as subject list
+    # I created these lists by copying columns from an Excel spreadsheet into text files
 
 # ---------------------------------------------------------------------------------------------------------------
 
