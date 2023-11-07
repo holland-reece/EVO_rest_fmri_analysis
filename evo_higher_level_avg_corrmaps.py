@@ -20,11 +20,11 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized/{site}' # where subject folders are located
+datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # where subject folders are located
 scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
@@ -98,3 +98,22 @@ for session in sessions:
                 cifti_list_str = f'{cifti_list_str} -cifti {map}'
             cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
             q.exec_cmds(cmd)
+
+# %% Calculate Pre- vs. Post-intervention difference maps
+corrmapsin_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_avg_corrmaps' # where input correlation maps are located
+diffmapsout_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps' # where to output difference maps
+wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
+
+q = fmri_tools(datadir)
+sessions = ['1','2']
+rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+conditions = ['BandTogether','WORDS'] # names of treatment condition groups, as in input corrmap file names
+
+cmd = [None]
+for roi in rois:
+    for condition in conditions:
+        corrmap_S1 = f'{corrmapsin_dir}/{roi}_{condition}_S1_avgcorrmap.dscalar.nii'
+        corrmap_S2 = f'{corrmapsin_dir}/{roi}_{condition}_S2_avgcorrmap.dscalar.nii'
+        diffmap_out = f'{diffmapsout_dir}/{roi}_{group}_S1vS2_diffmap.dscalar.nii'
+        cmd = f'{wb_command} '
+        q.exec_cmds(cmd)
