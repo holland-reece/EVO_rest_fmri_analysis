@@ -100,6 +100,15 @@ for session in sessions:
             q.exec_cmds(cmd)
 
 # %% Calculate Pre- vs. Post-intervention difference maps
+import os
+# import json
+import glob
+from my_imaging_tools import fmri_tools
+
+datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # where subject folders are located
+scriptdir = f'/Volumes/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
+wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
+
 corrmapsin_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_avg_corrmaps' # where input correlation maps are located
 diffmapsout_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps' # where to output difference maps
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
@@ -117,3 +126,4 @@ for roi in rois:
         diffmap_out = f'{diffmapsout_dir}/{roi}_{condition}_S2minusS1_diffmap.dscalar.nii'
         cmd[0] = f'{wb_command} -cifti-math "x - y" {diffmap_out} -var x {corrmap_S2} -var y {corrmap_S1}'
         q.exec_cmds(cmd)
+# %%
