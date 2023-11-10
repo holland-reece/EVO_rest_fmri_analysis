@@ -24,8 +24,8 @@ site = 'NKI'
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # where subject folders are located
-scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
+datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # where subject folders are located
+scriptdir = f'/Volumes/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
@@ -114,6 +114,6 @@ for roi in rois:
     for condition in conditions:
         corrmap_S1 = f'{corrmapsin_dir}/{roi}_{condition}_S1_avgcorrmap.dscalar.nii'
         corrmap_S2 = f'{corrmapsin_dir}/{roi}_{condition}_S2_avgcorrmap.dscalar.nii'
-        diffmap_out = f'{diffmapsout_dir}/{roi}_{group}_S1vS2_diffmap.dscalar.nii'
-        cmd = f'{wb_command} '
+        diffmap_out = f'{diffmapsout_dir}/{roi}_{condition}_S2minusS1_diffmap.dscalar.nii'
+        cmd[0] = f'{wb_command} -cifti-math "x - y" {diffmap_out} -var x {corrmap_S2} -var y {corrmap_S1}'
         q.exec_cmds(cmd)
