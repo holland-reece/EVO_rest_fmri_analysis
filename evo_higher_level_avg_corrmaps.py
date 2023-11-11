@@ -111,7 +111,7 @@ scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this s
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 corrmapsin_dir = f'/media/holland/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_avg_corrmaps' # where input correlation maps are located
-diffmapsout_dir = f'/media/holland/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps' # where to output difference maps
+diffmapsout_dir = f'/media/holland/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps_v2' # where to output difference maps
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
@@ -119,12 +119,17 @@ sessions = ['1','2']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 conditions = ['BandTogether','WORDS'] # names of treatment condition groups, as in input corrmap file names
 
+# Create output dir if it does not exist; don't overwrite existing dirs
+q.create_dirs(diffmapsout_dir)
+
+# Subtract rows of time2 corrmap from rows of time1 corrmap
 cmd = [None]
 for roi in rois:
     for condition in conditions:
         corrmap_S1 = f'{corrmapsin_dir}/{roi}_{condition}_S1_avgcorrmap.dscalar.nii'
         corrmap_S2 = f'{corrmapsin_dir}/{roi}_{condition}_S2_avgcorrmap.dscalar.nii'
         diffmap_out = f'{diffmapsout_dir}/{roi}_{condition}_S2minusS1_diffmap.dscalar.nii'
-        cmd[0] = f'{wb_command} -cifti-math "x - y" {diffmap_out} -var x {corrmap_S2} -var y {corrmap_S1}'
+        # cmd[0] = f"{wb_command} -cifti-math 'x - y' {diffmap_out} -var x {corrmap_S2} -var y {corrmap_S1}"
+        cmd[0] = f"wb_command -cifti-math {diffmap_out} -var 'time2' {corrmap_S2} -var 'time1' {corrmap_S1} -expr 'time2 - time1'"
         q.exec_cmds(cmd)
 # %%
