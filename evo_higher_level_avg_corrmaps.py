@@ -1,8 +1,9 @@
-# EVO Higher-Level ROI Analysis: Create Average Correlation Maps
+# EVO Higher-Level ROI Analysis
+# Create average correlation maps for each Tx condition and calculate pre- vs. post-Tx difference maps 
 
 # Holland Brown
 
-# Updated 2023-11-10
+# Updated 2023-11-11
 # Created 2023-11-03
 
 # Need condition group assignment label for each subject
@@ -105,12 +106,12 @@ import os
 import glob
 from my_imaging_tools import fmri_tools
 
-datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # where subject folders are located
-scriptdir = f'/Volumes/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
+datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # where subject folders are located
+scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
-corrmapsin_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_avg_corrmaps' # where input correlation maps are located
-diffmapsout_dir = f'/Volumes/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps' # where to output difference maps
+corrmapsin_dir = f'/media/holland/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_avg_corrmaps' # where input correlation maps are located
+diffmapsout_dir = f'/media/holland/EVO_Estia/EVO_ROI_analysis/EVO_ROI_higherlev/higherlev_difference_maps' # where to output difference maps
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
