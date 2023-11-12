@@ -32,7 +32,6 @@ wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 q = fmri_tools(datadir)
 sessions = ['1','2']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
-#subs = q.read_temp_sublist_txt('/athena/victorialab/scratch/hob4003/study_EVO/NKI_subjectlist.txt')
 
 # %% Read in labels and subjects txt files (created from excel spreadsheet)
 subtxt = f'/home/holland/Desktop/EVOsubjects.txt'
@@ -100,7 +99,7 @@ for session in sessions:
             cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
             q.exec_cmds(cmd)
 
-# %% Calculate Pre- vs. Post-intervention difference maps
+# %% Calculate pre- vs. post-Tx difference maps
 import os
 # import json
 import glob
