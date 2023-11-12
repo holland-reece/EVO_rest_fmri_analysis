@@ -120,7 +120,7 @@ conditions = ['BandTogether','WORDS'] # names of treatment condition groups, as 
 # num_rows = '59412' # number of rows in the corrmap cifti files (use wb_command -file-information to find this)
 
 # Create output dir if it does not exist; don't overwrite existing dirs
-# q.create_dirs(diffmapsout_dir)
+q.create_dirs(diffmapsout_dir)
 
 # Subtract rows of time2 corrmap from rows of time1 corrmap
 cmds = [None]*2
@@ -168,7 +168,9 @@ with open(f"{diffmapsout_dir}/max_vals.txt", "wb") as f:
 
             # subtract the matrices row by row
             diffmat = corr1 - corr2
-            np.savetxt(f'{diffmap_out}.txt', diffmat)
+            # diffmat = diffmat.round(6)
+            # diffmat = diffmat.astype(np.float16)
+            np.savetxt(f'{diffmap_out}.txt', diffmat, fmt='%f')
 
             # convert back to CIFTI file format, using S1 corrmap as template
             cmd[0] = f'{wb_command} -cifti-convert -from-text {diffmap_out}.txt {corrmap_S1}.dscalar.nii {diffmap_out}.dscalar.nii'
