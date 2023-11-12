@@ -157,24 +157,47 @@ with open(f"{diffmapsout_dir}/max_vals.txt", "wb") as f:
             # cmd[0] = f"wb_command -cifti-math 'time2 - time1' {diffmap_out} -var time2 {scaled_corrmapS2} -select 1 1 -var time1 {scaled_corrmapS1} -select 1 1"
             # q.exec_cmds(cmd)
 
+            # separate corrmaps into left and right hemispheres
+            cmds[0] = f'{wb_command} -cifti-separate {corrmap_S1}.dscalar.nii COLUMN -metric CORTEX_LEFT {corrmap_S1}_hemisphereL.func.gii'
+            cmds[1] = f'{wb_command} -cifti-separate {corrmap_S1}.dscalar.nii COLUMN -metric CORTEX_RIGHT {corrmap_S1}_hemisphereR.func.gii'
+            q.exec_cmds(cmds)
+
+            cmds[0] = f'{wb_command} -cifti-separate {corrmap_S2}.dscalar.nii COLUMN -metric CORTEX_LEFT {corrmap_S2}_hemisphereL.func.gii'
+            cmds[1] = f'{wb_command} -cifti-separate {corrmap_S2}.dscalar.nii COLUMN -metric CORTEX_RIGHT {corrmap_S2}_hemisphereR.func.gii'
+            q.exec_cmds(cmds)
+
             # convert dscalar files to txt
-            cmds[0] = f'wb_command -cifti-convert -to-text {corrmap_S1}.dscalar.nii {corrmap_S1}.txt'
-            cmds[1] = f'wb_command -cifti-convert -to-text {corrmap_S2}.dscalar.nii {corrmap_S2}.txt'
+            # cmds[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}.dscalar.nii {corrmap_S1}.txt'
+            # cmds[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}.dscalar.nii {corrmap_S2}.txt'
+            cmd[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereL.func.gii {corrmap_S2}_hemisphereL.txt'
+            cmd[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereR.func.gii {corrmap_S2}_hemisphereR.txt'
+            q.exec_cmds(cmds)
+
+            cmd[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereL.func.gii {corrmap_S1}_hemisphereL.txt'
+            cmd[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereR.func.gii {corrmap_S1}_hemisphereR.txt'
             q.exec_cmds(cmds)
 
             # read in txt files with numpy
-            corr1 = np.loadtxt(f'{corrmap_S1}.txt')
-            corr2 = np.loadtxt(f'{corrmap_S2}.txt')
+            corr1_L = np.loadtxt(f'{corrmap_S1}_hemisphereL.txt')
+            corr2_L = np.loadtxt(f'{corrmap_S2}_hemisphereL.txt')
+
+            corr1_R = np.loadtxt(f'{corrmap_S1}_hemisphereR.txt')
+            corr2_R = np.loadtxt(f'{corrmap_S2}_hemisphereR.txt')
 
             # subtract the matrices row by row
-            diffmat = corr1 - corr2
+            diffmat_L = corr1_L - corr2_L
+            diffmat_R = corr1_R - corr2_R
             # diffmat = diffmat.round(6)
             # diffmat = diffmat.astype(np.float16)
-            np.savetxt(f'{diffmap_out}.txt', diffmat, fmt='%f')
+            np.savetxt(f'{diffmap_out}_hemisphereL.txt', diffmat_L, fmt='%f')
+            np.savetxt(f'{diffmap_out}_hemisphereR.txt', diffmat_R, fmt='%f')
 
             # convert back to CIFTI file format, using S1 corrmap as template
-            cmd[0] = f'{wb_command} -cifti-convert -from-text {diffmap_out}.txt {corrmap_S1}.dscalar.nii {diffmap_out}.dscalar.nii'
-            q.exec_cmds(cmd)
+            cmds[0] = f'{wb_command} -cifti-convert -from-text {diffmap_out}_hemisphereL.txt {corrmap_S1}.dscalar.nii {diffmap_out}_hemisphereL.dscalar.nii'
+            cmds[1] = f'{wb_command} -cifti-convert -from-text {diffmap_out}_hemisphereL.txt {corrmap_S1}.dscalar.nii {diffmap_out}_hemisphereR.dscalar.nii'
+            q.exec_cmds(cmds)
+
+            # recombine hemispheres
 
 f.close()
 # %%
