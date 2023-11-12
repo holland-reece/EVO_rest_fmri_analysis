@@ -105,6 +105,7 @@ import subprocess
 import sys
 # import json
 import glob
+import numpy as np
 from my_imaging_tools import fmri_tools
 
 datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # where subject folders are located
@@ -122,42 +123,56 @@ conditions = ['BandTogether','WORDS'] # names of treatment condition groups, as 
 # q.create_dirs(diffmapsout_dir)
 
 # Subtract rows of time2 corrmap from rows of time1 corrmap
+cmds = [None]*2
 cmd = [None]
 with open(f"{diffmapsout_dir}/max_vals.txt", "wb") as f:
     for roi in rois:
         for condition in conditions:
-            corrmap_S1 = f'{corrmapsin_dir}/{roi}_{condition}_S1_avgcorrmap.dscalar.nii'
-            corrmap_S2 = f'{corrmapsin_dir}/{roi}_{condition}_S2_avgcorrmap.dscalar.nii'
-            diffmap_out = f'{diffmapsout_dir}/{roi}_{condition}_S1minusS2_diffmap.dscalar.nii'
+            corrmap_S1 = f'{corrmapsin_dir}/{roi}_{condition}_S1_avgcorrmap'
+            corrmap_S2 = f'{corrmapsin_dir}/{roi}_{condition}_S2_avgcorrmap'
+            diffmap_out = f'{diffmapsout_dir}/{roi}_{condition}_S1minusS2_diffmap'
 
-            # cmd[0] = f"{wb_command} -cifti-math 'x - y' {diffmap_out} -var x {corrmap_S2} -var y {corrmap_S1}"
-            # cmd[0] = f"wb_command -cifti-math 'time2 - time1' {diffmap_out} -var time2 {corrmap_S2} -select 1 1 -var time1 {corrmap_S1} -select 1 1"
-            # cmd[0] = f'wb_command -surface-to-surface-3d-distance {corrmap_S1} {corrmap_S2} {diffmap_out}'
-            # cmd[0] = f"wb_command -cifti-math 'sqrt((x-y)^2)' {diffmap_out} -var x {corrmap_S1} -select 1 1 -var y {corrmap_S2} -select 1 1"
-            for cm in [corrmap_S1,corrmap_S2]:
-                command = f'wb_command -cifti-stats {cm} -reduce MAX'
-                get_max_val = subprocess.run(command, shell=True, executable='/bin/bash',capture_output=True)
-                f.write(get_max_val.stdout)
-                max = str(get_max_val.stdout.decode("utf-8"))
-                max_v = max.replace("b'","")
-                max_va = max_v.replace("\n'","")
-                max_val = max_va.strip('\n')
-                print(max_val)
+            # DOESN'T WORK: CIFTI-MATH SUCKS
+            # for cm in [corrmap_S1,corrmap_S2]:
+            #     command = f'wb_command -cifti-stats {cm} -reduce MAX'
+            #     get_max_val = subprocess.run(command, shell=True, executable='/bin/bash',capture_output=True)
+            #     f.write(get_max_val.stdout)
+            #     max = str(get_max_val.stdout.decode("utf-8"))
+            #     max_v = max.replace("b'","")
+            #     max_va = max_v.replace("\n'","")
+            #     max_val = max_va.strip('\n')
+            #     print(max_val)
 
-                if cm == corrmap_S1:
-                    scaled_corrmap = f'{diffmapsout_dir}/{roi}_{condition}_S1_scaled.dscalar.nii'
-                else:
-                    scaled_corrmap = f'{diffmapsout_dir}/{roi}_{condition}_S2_scaled.dscalar.nii'
+            #     if cm == corrmap_S1:
+            #         scaled_corrmap = f'{diffmapsout_dir}/{roi}_{condition}_S1_scaled.dscalar.nii'
+            #     else:
+            #         scaled_corrmap = f'{diffmapsout_dir}/{roi}_{condition}_S2_scaled.dscalar.nii'
                 
-                cmd[0] = f"{wb_command} -cifti-math 'x/abs({max_val})' -var x {cm} {scaled_corrmap}"
-                q.exec_cmds(cmd)
+            #     cmd[0] = f"{wb_command} -cifti-math 'x/abs({max_val})' -var x {cm} {scaled_corrmap}"
+            #     q.exec_cmds(cmd)
 
-            scaled_corrmapS1 = f'{diffmapsout_dir}/{roi}_{condition}_S1_scaled.dscalar.nii'
-            scaled_corrmapS2 = f'{diffmapsout_dir}/{roi}_{condition}_S2_scaled.dscalar.nii'
+            # scaled_corrmapS1 = f'{diffmapsout_dir}/{roi}_{condition}_S1_scaled.dscalar.nii'
+            # scaled_corrmapS2 = f'{diffmapsout_dir}/{roi}_{condition}_S2_scaled.dscalar.nii'
 
-            cmd[0] = f"wb_command -cifti-math 'time2 - time1' {diffmap_out} -var time2 {scaled_corrmapS2} -select 1 1 -var time1 {scaled_corrmapS1} -select 1 1"
+            # cmd[0] = f"wb_command -cifti-math 'time2 - time1' {diffmap_out} -var time2 {scaled_corrmapS2} -select 1 1 -var time1 {scaled_corrmapS1} -select 1 1"
+            # q.exec_cmds(cmd)
+
+            # convert dscalar files to txt
+            cmds[0] = f'wb_command -cifti-convert -to-text {corrmap_S1}.dscalar.nii {corrmap_S1}.txt'
+            cmds[1] = f'wb_command -cifti-convert -to-text {corrmap_S2}.dscalar.nii {corrmap_S2}.txt'
+            q.exec_cmds(cmds)
+
+            # read in txt files with numpy
+            corr1 = np.loadtxt(f'{corrmap_S1}.txt')
+            corr2 = np.loadtxt(f'{corrmap_S2}.txt')
+
+            # subtract the matrices row by row
+            diffmat = corr1 - corr2
+            np.savetxt(f'{diffmap_out}.txt', diffmat)
+
+            # convert back to CIFTI file format, using S1 corrmap as template
+            cmd[0] = f'{wb_command} -cifti-convert -from-text {diffmap_out}.txt {corrmap_S1}.dscalar.nii {diffmap_out}.dscalar.nii'
             q.exec_cmds(cmd)
-
 
 f.close()
 # %%
