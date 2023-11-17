@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-10
+# Updated 2023-11-17
 # Created 2023-11-09
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -74,12 +74,12 @@ import os
 import glob
 from my_imaging_tools import fmri_tools
 
-sites = ['NKI','UW']
+sites = ['NKI']
 tasks = ['adjective','floop']
 sessions = ['1','2']
 runs = ['1','2']
 
-missing_txt = open(f'/Users/holland_brown_ra/Desktop/evo_missing_task_jsons.txt','w')
+missing_txt = open(f'/Users/holland_brown_ra/Desktop/evo_NKI_missing_task_jsons.txt','w')
 cmd = [None]
 for site in sites:
     datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized/{site}'
