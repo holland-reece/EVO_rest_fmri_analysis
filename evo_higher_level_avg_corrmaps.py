@@ -169,12 +169,12 @@ with open(f"{diffmapsout_dir}/max_vals.txt", "wb") as f:
             # convert dscalar files to txt
             # cmds[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}.dscalar.nii {corrmap_S1}.txt'
             # cmds[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}.dscalar.nii {corrmap_S2}.txt'
-            cmd[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereL.func.gii {corrmap_S2}_hemisphereL.txt'
-            cmd[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereR.func.gii {corrmap_S2}_hemisphereR.txt'
+            cmds[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereL.func.gii {corrmap_S2}_hemisphereL.txt'
+            cmds[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S2}_hemisphereR.func.gii {corrmap_S2}_hemisphereR.txt'
             q.exec_cmds(cmds)
 
-            cmd[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereL.func.gii {corrmap_S1}_hemisphereL.txt'
-            cmd[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereR.func.gii {corrmap_S1}_hemisphereR.txt'
+            cmds[0] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereL.func.gii {corrmap_S1}_hemisphereL.txt'
+            cmds[1] = f'{wb_command} -cifti-convert -to-text {corrmap_S1}_hemisphereR.func.gii {corrmap_S1}_hemisphereR.txt'
             q.exec_cmds(cmds)
 
             # read in txt files with numpy
