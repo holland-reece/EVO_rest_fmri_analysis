@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-10
+# Updated 2023-11-17
 # Created 2023-11-09
 
 # ---------------------------------------------------------------------------------------------------------------
@@ -67,6 +67,34 @@ q = fmri_tools(drivedir)
 #                 cmd_pt3 = f" {taskdir}/{new_filename}.json"
 #                 cmd[0] = f'{cmd_pt1}{cmd_pt2}{cmd_pt3} \;'
 #                 q.exec_cmds(cmd)
+
+# %% Print subject sessions missing task JSON files
+import os
+# import json
+import glob
+from my_imaging_tools import fmri_tools
+
+sites = ['NKI']
+tasks = ['adjective','floop']
+sessions = ['1','2']
+runs = ['1','2']
+
+missing_txt = open(f'/Users/holland_brown_ra/Desktop/evo_NKI_missing_task_jsons.txt','w')
+cmd = [None]
+for site in sites:
+    datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized/{site}'
+    q = fmri_tools(datadir)
+    for sub in q.subs:
+        for task in tasks:
+            for session in sessions:
+                for run in runs:
+                    taskdir = f'{datadir}/{sub}/func/unprocessed/task/{task}/session_{session}/run_{run}'
+                    if os.path.isdir(taskdir):
+                        # json_check = os.path.isfile(f'{taskdir}/{sub}_S{session}_R{run}_{task}.json')
+                        if os.path.isfile(f'{taskdir}/{sub}_S{session}_R{run}_{task}.json') == False:
+                            missing_txt.write(f'{sub}_S{session}_R{run}_{task}.json\n')
+
+missing_txt.close()
 
 
 # %% Copy renamed files from HDD to cluster dir
