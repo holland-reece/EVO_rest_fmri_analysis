@@ -3,7 +3,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-11
+# Updated 2023-11-20
 # Created 2023-11-03
 
 # Need condition group assignment label for each subject
@@ -11,6 +11,11 @@
         # (1) subjects to be included in higher levels
         # (2) group assignments as 0 (EVO) or 1 (HC), in same order as subject list
     # I created these lists by copying columns from an Excel spreadsheet into text files
+
+# NEXT: Troubleshoot CIFTI file format
+    # can't do mixed-effects linear model with wb_command functions, and dscalar.nii incompatible with FSL, nilearn, everything
+    # one option is to use volumetric data, but that would waste surface data we got from ME preproc pipeline
+    # try: find a way to mask functional dtseries.nii to get ROIs, then use numpy/nilearn
 
 # ---------------------------------------------------------------------------------------------------------------
 
@@ -99,7 +104,7 @@ for session in sessions:
             cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
             q.exec_cmds(cmd)
 
-# %% Calculate pre- vs. post-Tx difference maps
+# %% Troubleshoot CIFTI file format: Calculate pre- vs. post-Tx difference maps
 import os
 import subprocess
 import sys
@@ -200,4 +205,4 @@ with open(f"{diffmapsout_dir}/max_vals.txt", "wb") as f:
             # recombine hemispheres
 
 f.close()
-# %%
+# %% Troubleshoot CIFTI file format:
