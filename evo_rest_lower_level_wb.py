@@ -22,8 +22,10 @@ import os
 import glob
 from my_imaging_tools import fmri_tools
 
-datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data' # where subject folders are located
-scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
+# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data' # where subject folders are located
+datadir = f'/Users/holland_brown_ra/Desktop/MRI_temp'
+scriptdir = datadir
+# scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 atlasdir = f'{scriptdir}/Glasser_et_al_2016_HCP_MMP1.0_kN_RVVG/HCP_PhaseTwo/Q1-Q6_RelatedValidation210/MNINonLinear/fsaverage_LR32k' # where HCP MMP1.0 files are located (downloaded from BALSA)
 atlas_labels = f'{atlasdir}/Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii' # HCP MMP1.0 parcel labels (either *.dlabel.nii or *.dscalar.nii files)
 wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
@@ -45,21 +47,21 @@ roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC
 # roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
 # create ROI dir and parcels subdir, if needed
-if os.path.isdir(roidir)==False:
-    q.create_dirs(roidir)
-if os.path.isdir(f'{roidir}/{roi}_HCP_MMP1_parcels')==False:
-    q.create_dirs(f'{roidir}/{roi}_HCP_MMP1_parcels')
+# if os.path.isdir(roidir)==False:
+#     q.create_dirs(roidir)
+# if os.path.isdir(f'{roidir}/{roi}_HCP_MMP1_parcels')==False:
+#     q.create_dirs(f'{roidir}/{roi}_HCP_MMP1_parcels')
 
 cmd = [None]*4
 command=[None]
 # maskcmd=[None]
 
-tf = open(f'{scriptdir}/FuncFileDoesNotExist.txt','w')
+# tf = open(f'{scriptdir}/FuncFileDoesNotExist.txt','w')
 
 for sub in q.subs:
     for session in sessions:
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-        if os.path.isfile(func_in)==True:
+        if os.path.isfile(func_in)==False:
             # # get TR from JSON
             # with open(f'{datadir}/{sub}/func/unprocessed/session_1/run_1/Rest_S{session}_R1_E1.json', 'rt') as rest_json:
             #     rest_info = json.load(rest_json)
@@ -72,27 +74,35 @@ for sub in q.subs:
             corrmat_out = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_wholebrain'
             # resampled_atlas = f'{datadir}/{sub}/func/resampled_Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii'
             
-            if os.path.isdir(sub_roidir)==False:
-                q.create_dirs(sub_roidir)
+            # if os.path.isdir(sub_roidir)==False:
+            #     q.create_dirs(sub_roidir)
 
             # resample the subject's functional data to the HCP MMP1.0 atlas space
             if os.path.isfile(resampled_func)==False:
                 command[0] = f'{wb_command} -cifti-resample {func_in} COLUMN {atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'
-                q.exec_cmds(command)
+                # q.exec_cmds(command)
 
             # if needed, create binary ROI mask (not subject-specific)
             if os.path.isfile(f'{roidir}/{roi}_bin.dscalar.nii')==False:
                 # create binary ROI mask for each HCP-MMP1.0 parcel
+                mask_cmd_struct1 = f'mask1'
+                mask_cmd_struct2 = f''
+                counter = 0
                 for p in roi_parcels:
                     if os.path.isfile(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_{p}.dscalar.nii')==False:
                         command[0] = f'{wb_command} -cifti-label-to-roi {atlas_labels} {roidir}/{roi}_HCP_MMP1_parcels/{roi}_{p}.dscalar.nii -name {p}'
                         q.exec_cmds(command)
+                    tmp_counter = counter + 1
+                    if counter > 0:
+                        mask_cmd_struct1 = f'{mask_cmd_struct1} + mask{tmp_counter}'
+                    mask_cmd_struct2 = f'{mask_cmd_struct2} -var \'mask{tmp_counter}\' {cifti_roi_args[counter]}'
+                    counter += 1
 
                 # concatenate parcel masks into one ROI mask, then binarize
                 cifti_roi_args = glob.glob(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_*.dscalar.nii')
-                command[0] = f"{wb_command} -cifti-math '(mask1 + mask2 + mask3) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
-                # command[0] = f"{wb_command} -cifti-math '(mask1 + mask2) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]}"
-                q.exec_cmds(command)
+                command[0] = f"{wb_command} -cifti-math '({mask_cmd_struct1}) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
+                print(command[0])
+                # q.exec_cmds(command)
 
             # average the ROI time series from the functional dense time series
             cmd[0] = f'{wb_command} -cifti-roi-average {resampled_func} {roi_ts_out}.txt -cifti-roi {roidir}/{roi}_bin.dscalar.nii'
@@ -124,11 +134,11 @@ for sub in q.subs:
             # filter by significance of p < 0.05
             # cmd[7] = f'{wb_command} -metric-math "(p < 0.05)" {corrmat_out}_corrmap_significant.dscalar.nii -var "p" statistical_map.func.gii'
 
-            q.exec_cmds(cmd)
+            # q.exec_cmds(cmd)
 
-        else:
-            tf.write(f'File does not exist: {func_in}')
-tf.close()
+#         else:
+#             tf.write(f'File does not exist: {func_in}')
+# tf.close()
 
 
 # %% Compute mask to only show activity in correlation maps that is within confidence interval

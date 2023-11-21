@@ -1,4 +1,4 @@
-# Create binary ROI masks from volumetric ROI nifti file
+# Create binary ROI masks for CIFTI files using Connectome Workbench commandline tools
 # Holland Brown
 
 # Updated 2023-10-25

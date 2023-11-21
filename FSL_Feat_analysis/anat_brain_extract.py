@@ -1,4 +1,4 @@
-# Brain Extraction with FSL BET: use this script to get masks for fieldmap preprocessing with Liston Multi-echo Pipeline
+# Brain Extraction with FSL BET: use this script to get masks for fieldmap preprocessing
 
 # Holland Brown
 
@@ -7,6 +7,7 @@
 
 # This script...
     # runs brain extraction for anatomical images using FSL BET
+    # used in EVO study to create masks for ICA-AROMA denoising and fieldmap preprocessing
 
 # References:
     # FSL BET User Guide: https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/BET/UserGuide
