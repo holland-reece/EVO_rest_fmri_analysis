@@ -3,7 +3,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-20
+# Updated 2023-11-22
 # Created 2023-11-03
 
 # Need condition group assignment label for each subject
@@ -30,8 +30,8 @@ site = 'NKI'
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-datadir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # where subject folders are located
-scriptdir = f'/Volumes/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
+datadir = f'/media/holland/EVO_Estia/EVO_MRI/organized/NKI' # where subject folders are located
+scriptdir = f'/media/holland/EVO_Estia/EVO_lowerlev_avg_corrmaps' # where this script, atlas, and my_imaging_tools script are located
 wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
@@ -102,7 +102,7 @@ for session in sessions:
             for map in group_corr_maps:
                 cifti_list_str = f'{cifti_list_str} -cifti {map}'
             cmd[0] = f'{wb_command} -cifti-average {cifti_out} {exclude_outliers_opt}{cifti_list_str}'
-            q.exec_cmds(cmd)
+            # q.exec_cmds(cmd)
 
 # %% Troubleshoot CIFTI file format: Calculate pre- vs. post-Tx difference maps
 import os
@@ -125,7 +125,7 @@ conditions = ['BandTogether','WORDS'] # names of treatment condition groups, as 
 # num_rows = '59412' # number of rows in the corrmap cifti files (use wb_command -file-information to find this)
 
 # Create output dir if it does not exist; don't overwrite existing dirs
-q.create_dirs(diffmapsout_dir)
+# q.create_dirs(diffmapsout_dir)
 
 # Subtract rows of time2 corrmap from rows of time1 corrmap
 cmds = [None]*2
