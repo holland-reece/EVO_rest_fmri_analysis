@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-10-30
+# Updated 2023-11-22
 # Created 2023-09-22
 
 # Next:
@@ -12,7 +12,8 @@
     # also need to figure out how to z-score output (wb_command only offers a way to Fisher-z-score the output)
 
 # Sources:
-# https://www.mail-archive.com/hcp-users@humanconnectome.org/msg04539.html # consider this procedure
+# https://www.mail-archive.com/hcp-users@humanconnectome.org/msg04539.html - consider this procedure
+# https://www.mail-archive.com/hcp-users@humanconnectome.org/msg06378.html - resample binary mask to participant's func data
 
 # ---------------------------------------------------------------------------------------------------------------
 
@@ -23,45 +24,46 @@ import glob
 from my_imaging_tools import fmri_tools
 
 # datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data' # where subject folders are located
-datadir = f'/Users/holland_brown_ra/Desktop/MRI_temp'
-scriptdir = datadir
+datadir = f'/home/holland/Desktop/EVO_TEST/subjects'
+scriptdir = f'/home/holland/Desktop/EVO_TEST'
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 atlasdir = f'{scriptdir}/Glasser_et_al_2016_HCP_MMP1.0_kN_RVVG/HCP_PhaseTwo/Q1-Q6_RelatedValidation210/MNINonLinear/fsaverage_LR32k' # where HCP MMP1.0 files are located (downloaded from BALSA)
 atlas_labels = f'{atlasdir}/Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii' # HCP MMP1.0 parcel labels (either *.dlabel.nii or *.dscalar.nii files)
-wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
+# wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
+wb_command = f'wb_command'
 
-q = fmri_tools(datadir)
+q = fmri_tools(datadir) # get subject list from directories; init package
 sessions = ['1','2']
 
 
 # %% Create binary ROI mask and compute roi-to-wholebrain cross-correlation maps
-roi = 'R_dACC'
+roi = 'R_rACC'
 roidir = f'{scriptdir}/EVO_lower_level_ROI_masks/{roi}'
 
 # ROI parcel names from HCP MMP1.0 atlas labels
 # roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
 # roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
-roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC
+# roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC
 # roi_parcels = ['L_p24pr_ROI','L_33pr_ROI','L_a24pr_ROI'] # L_dACC
-# roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
+roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
 # roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
 # create ROI dir and parcels subdir, if needed
-# if os.path.isdir(roidir)==False:
-#     q.create_dirs(roidir)
-# if os.path.isdir(f'{roidir}/{roi}_HCP_MMP1_parcels')==False:
-#     q.create_dirs(f'{roidir}/{roi}_HCP_MMP1_parcels')
+if os.path.isdir(roidir)==False:
+    q.create_dirs(roidir)
+if os.path.isdir(f'{roidir}/{roi}_HCP_MMP1_parcels')==False:
+    q.create_dirs(f'{roidir}/{roi}_HCP_MMP1_parcels')
 
 cmd = [None]*4
 command=[None]
-# maskcmd=[None]
+maskcmd=[None]
 
-# tf = open(f'{scriptdir}/FuncFileDoesNotExist.txt','w')
+tf = open(f'{scriptdir}/FuncFileDoesNotExist.txt','w')
 
 for sub in q.subs:
     for session in sessions:
         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
-        if os.path.isfile(func_in)==False:
+        if os.path.isfile(func_in) == True: # TEST: should be True
             # # get TR from JSON
             # with open(f'{datadir}/{sub}/func/unprocessed/session_1/run_1/Rest_S{session}_R1_E1.json', 'rt') as rest_json:
             #     rest_info = json.load(rest_json)
@@ -69,40 +71,41 @@ for sub in q.subs:
 
             sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
             resampled_func = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_denoised_func_data_aggr_s1.7_resampled2atlas.dtseries.nii'
-            # resampled_func = func_in
             roi_ts_out = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_meants'
             corrmat_out = f'{sub_roidir}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_wholebrain'
-            # resampled_atlas = f'{datadir}/{sub}/func/resampled_Q1-Q6_RelatedValidation210.CorticalAreas_dil_Final_Final_Areas_Group_Colors.32k_fs_LR.dlabel.nii'
             
-            # if os.path.isdir(sub_roidir)==False:
-            #     q.create_dirs(sub_roidir)
+            if os.path.isdir(sub_roidir)==False:
+                q.create_dirs(sub_roidir)
 
             # resample the subject's functional data to the HCP MMP1.0 atlas space
-            if os.path.isfile(resampled_func)==False:
+            if os.path.isfile(resampled_func) == False:
                 command[0] = f'{wb_command} -cifti-resample {func_in} COLUMN {atlas_labels} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {resampled_func}'
-                # q.exec_cmds(command)
+                q.exec_cmds(command)
 
-            # if needed, create binary ROI mask (not subject-specific)
-            if os.path.isfile(f'{roidir}/{roi}_bin.dscalar.nii')==False:
+            # if needed, create binary ROI mask (create once for all subjects)
+            if os.path.isfile(f'{roidir}/{roi}_bin.dscalar.nii') == False:
+
                 # create binary ROI mask for each HCP-MMP1.0 parcel
-                mask_cmd_struct1 = f'mask1'
-                mask_cmd_struct2 = f''
-                counter = 0
                 for p in roi_parcels:
                     if os.path.isfile(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_{p}.dscalar.nii')==False:
                         command[0] = f'{wb_command} -cifti-label-to-roi {atlas_labels} {roidir}/{roi}_HCP_MMP1_parcels/{roi}_{p}.dscalar.nii -name {p}'
                         q.exec_cmds(command)
+            
+                # construct command to concatenate roi parcels into one mask (using wb_command -cifti-math)
+                mask_cmd_struct1 = f'mask1' # init math expression part of the cmd
+                mask_cmd_struct2 = f'' # init variables list part of the cmd
+                counter = 0
+                cifti_roi_args = glob.glob(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_*.dscalar.nii') # list roi parcel mask files
+                for p in roi_parcels:
                     tmp_counter = counter + 1
                     if counter > 0:
-                        mask_cmd_struct1 = f'{mask_cmd_struct1} + mask{tmp_counter}'
-                    mask_cmd_struct2 = f'{mask_cmd_struct2} -var \'mask{tmp_counter}\' {cifti_roi_args[counter]}'
-                    counter += 1
+                        mask_cmd_struct1 = f'{mask_cmd_struct1} + mask{tmp_counter}' # concatenate additional masks onto math expression part of cmd
+                    mask_cmd_struct2 = f'{mask_cmd_struct2} -var \'mask{tmp_counter}\' {cifti_roi_args[counter]}' # concat roi parcel file onto variable list part of cmd
+                    counter += 1 # update
 
                 # concatenate parcel masks into one ROI mask, then binarize
-                cifti_roi_args = glob.glob(f'{roidir}/{roi}_HCP_MMP1_parcels/{roi}_*.dscalar.nii')
-                command[0] = f"{wb_command} -cifti-math '({mask_cmd_struct1}) > 0' {roidir}/{roi}_bin.dscalar.nii -var 'mask1' {cifti_roi_args[0]} -var 'mask2' {cifti_roi_args[1]} -var 'mask3' {cifti_roi_args[2]}"
-                print(command[0])
-                # q.exec_cmds(command)
+                command[0] = f"{wb_command} -cifti-math '({mask_cmd_struct1}) > 0' {roidir}/{roi}_bin.dscalar.nii {mask_cmd_struct2}"
+                q.exec_cmds(command)
 
             # average the ROI time series from the functional dense time series
             cmd[0] = f'{wb_command} -cifti-roi-average {resampled_func} {roi_ts_out}.txt -cifti-roi {roidir}/{roi}_bin.dscalar.nii'
@@ -117,31 +120,39 @@ for sub in q.subs:
             # compute Fisher-z-scored version of correlation matrix
             cmd[3] = f'{wb_command} -cifti-math "atanh(x)" {corrmat_out}_crosscorrmap_fisherZ.dscalar.nii -var x {corrmat_out}_crosscorrmap.dscalar.nii'
 
+            """
+            Things I tried unsuccessfully, but that may be useful later...
+            
             # resample binary mask to participant's func data
             # See: https://www.mail-archive.com/hcp-users@humanconnectome.org/msg06378.html
-            # maskcmd[0] = f'{wb_command} -cifti-resample {roi_ts_out}.dscalar.nii COLUMN {resampled_func} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {sub_roidir}/{roi}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_meants.dscalar.nii'
-            # q.exec_cmds(maskcmd)
+            maskcmd[0] = f'{wb_command} -cifti-resample {roi_ts_out}.dscalar.nii COLUMN {resampled_func} COLUMN ADAP_BARY_AREA ENCLOSING_VOXEL {sub_roidir}/{roi}/{sub}_{roi}_S{session}_R1_denoised_aggr_s1.7_meants.dscalar.nii'
+            q.exec_cmds(maskcmd)
 
             # also compute covariance matrix
-            # cmd[4] = f'{wb_command} -cifti-correlation {func_in} {corrmat_out}_covmap.dscalar.nii -roi-override -cifti-roi {roi_ts_out} -covariance'
+            cmd[4] = f'{wb_command} -cifti-correlation {func_in} {corrmat_out}_covmap.dscalar.nii -roi-override -cifti-roi {roi_ts_out} -covariance'
 
             # compute correlation matrix with "no-demean" option: compute dot product of each row and normalize by diagonal
-            # cmd[5] = f'{wb_command} -cifti-correlation {resampled_func} {corrmat_out}_corrmap_no-demean.dscalar.nii -roi-override -cifti-roi {roi_ts_out}.dscalar.nii -no-demean'
+            cmd[5] = f'{wb_command} -cifti-correlation {resampled_func} {corrmat_out}_corrmap_no-demean.dscalar.nii -roi-override -cifti-roi {roi_ts_out}.dscalar.nii -no-demean'
 
             # try -cifti-average-roi-correlation
-            # cmd[5] = f'{wb_command} -cifti-average-roi-correlation {resampled_func} {corrmat_out}_corrmap.dscalar.nii'
+            cmd[5] = f'{wb_command} -cifti-average-roi-correlation {resampled_func} {corrmat_out}_corrmap.dscalar.nii'
 
             # filter by significance of p < 0.05
-            # cmd[7] = f'{wb_command} -metric-math "(p < 0.05)" {corrmat_out}_corrmap_significant.dscalar.nii -var "p" statistical_map.func.gii'
+            cmd[7] = f'{wb_command} -metric-math "(p < 0.05)" {corrmat_out}_corrmap_significant.dscalar.nii -var "p" statistical_map.func.gii'
+            """
 
-            # q.exec_cmds(cmd)
+            q.exec_cmds(cmd)
 
-#         else:
-#             tf.write(f'File does not exist: {func_in}')
-# tf.close()
+        else:
+            tf.write(f'File does not exist: {func_in}')
+tf.close()
 
 
 # %% Compute mask to only show activity in correlation maps that is within confidence interval
+"""
+NOTE: thresholding not reliable bc Connectome Workbench commandline tools only offer Fisher z-scoring option, which does not normalize distribution
+"""
+
 # import numpy as np
 # import scipy.stats
 # from nilearn import plotting, input_data, surface
