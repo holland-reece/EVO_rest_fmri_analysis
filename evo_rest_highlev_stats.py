@@ -3,14 +3,10 @@
 
 # Holland Brown
 
-# Updated 2023-11-20
+# Updated 2023-11-22
 # Created 2023-11-03
 
-# Need condition group assignment label for each subject
-    # Format labels in two text files, which code iterates through simultaneously to get subject group labels:
-        # (1) subjects to be included in higher levels
-        # (2) group assignments as 0 (EVO) or 1 (HC), in same order as subject list
-    # I created these lists by copying columns from an Excel spreadsheet into text files
+# Need avg corrmaps created with evo_rest_highlev_avg_corrmaps
 
 # NEXT: Troubleshoot CIFTI file format
     # can't do mixed-effects linear model with wb_command functions, and dscalar.nii incompatible with FSL, nilearn, everything
