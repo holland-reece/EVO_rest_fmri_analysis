@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # script adapted from https://figshare.com/articles/dataset/HCP-MMP1_0_volumetric_NIfTI_masks_in_native_structural_space/4249400?file=13320527
 
@@ -34,6 +34,11 @@
 # If the -m option is set to YES, each subject’s directory will also contain a masks/ directory containing one volume .nii.gz file for each binary mask
 # If the -s option is set to YES, an aseg_masks/ directory will be created, containing one .nii.gz file for each subcortical region
 # Inside the original subjects’ label folders, post-transformation annotation files will be created. These are not overwritten if the script is relaunched; so, if you ran into a problem and want to start over, you should delete these files (named lh(rh).<subject>_<name_of_annotation_file>.annot)
+
+
+# export FREESURFER_HOME=/usr/local/freesurfer
+source $FREESURFER_HOME/SetUpFreeSurfer.sh # HRB: make sure FreeSurfer path is in env
+SUBJECTS_DIR="/home/holland/Desktop/EVO_TEST/subjects" # HRB: set preprocessed data dir manually
 
 # define compulsory and optional arguments
 while getopts ":L:f:l:a:d::m:t:s:" o; do
@@ -80,7 +85,7 @@ if [ ! -z "${m}" ] ; then create_individual_masks=$m; fi
 if [ ! -z "${s}" ] ; then create_aseg_files=$s; fi
 if [ ! -z "${t}" ] ; then get_anatomical_stats=$t; fi
  
-printf "\n         >>>>         Current FreeSurfer subjects folder is $SUBJECTS_DIR\n\n"
+printf "\n         >>>>         Current FreeSurfer subjects folder is $SUBJECTS_DIR         <<<<         \n\n"
 
 #Check if FreeSurferColorLUT.txt is present in base folder
 if [[ ${create_aseg_files} == "YES" ]]; then if [[ ! -e FreeSurferColorLUT.txt ]]; then printf "         >>>>         ERROR: FreeSurferColorLUT.txt file not found. Subcortical masks will NOT be created\n\n"; create_aseg_files=NO; colorlut_miss=YES; fi; fi
@@ -105,11 +110,12 @@ if [[ ! -e $SUBJECTS_DIR/fsaverage/label/rh.${annotation_file}.annot ]]
 fi
 
 # Convert annotation to label, and get color lookup tables
-rm -f ./${output_dir}/log_annotation2label
-mri_annotation2label --subject fsaverage --hemi lh --outdir ./${output_dir}/label --annotation ${annotation_file} >> ./${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
-mri_annotation2label --subject fsaverage --hemi lh --outdir ./${output_dir}/label --annotation ${annotation_file} --ctab ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_L1 >> ./${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
-mri_annotation2label --subject fsaverage --hemi rh --outdir ./${output_dir}/label --annotation ${annotation_file} >> ./${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
-mri_annotation2label --subject fsaverage --hemi rh --outdir ./${output_dir}/label --annotation ${annotation_file} --ctab ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_R1 >> ./${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
+# HRB: removed "./" from all of these commands
+rm -f ${output_dir}/log_annotation2label
+mri_annotation2label --subject fsaverage --hemi lh --outdir ${output_dir}/label --annotation ${annotation_file} >> ${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
+mri_annotation2label --subject fsaverage --hemi lh --outdir ${output_dir}/label --annotation ${annotation_file} --ctab ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_L1 >> ${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
+mri_annotation2label --subject fsaverage --hemi rh --outdir ${output_dir}/label --annotation ${annotation_file} >> ${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
+mri_annotation2label --subject fsaverage --hemi rh --outdir ${output_dir}/label --annotation ${annotation_file} --ctab ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_R1 >> ${output_dir}/temp_${first}_${last}_${rand_id}/log_annotation2label
 
 # Remove number columns from ctab
 awk '!($1="")' ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_L1 >> ${output_dir}/temp_${first}_${last}_${rand_id}/colortab_${annotation_file}_L2
