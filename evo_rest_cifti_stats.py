@@ -28,7 +28,19 @@ sessions = ['1','2']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 
 # %% Calculate resting-state stats for all individual subjects
-cmd = [None]*1
-for sub in q.subs:
-    for session in sessions:
-        sub_datadir = f'{datadir}/{sub}/func/rest/session{session}'
+stats_opts = ['STDEV','VARIANCE','SAMPSTDEV','TSNR','COV','L2NORM','MAX','MIN']
+subs = ['97048']
+
+cmd = [None]*3
+
+# sub_datadir = f'{datadir}/{sub}/func/rest/session{session}'
+cifti_in = f'/home/holland/Desktop/97048_fsaverage_LR32k+lowerlevelROIs/rois/L_dACC/97048_L_dACC_S1_R1_denoised_aggr_s1.7_wholebrain_crosscorrmap.dscalar.nii'
+output = f'/home/holland/Desktop/97048_L_dACC_corr_map_stats.txt'
+
+# run cmds for each stat
+for stats_opt in stats_opts:
+    cmd[0] = f'echo \"{stats_opt}\" >> {output}'
+    cmd[1] = f'{wb_command} -cifti-stats {cifti_in} -reduce {stats_opt} >> {output}'
+    cmd[2] = f'echo \"\n\" >> {output}'
+    q.exec_cmds(cmd)
+# %%
