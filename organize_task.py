@@ -2,41 +2,43 @@
 
 # Holland Brown
 
-# Updated 2023-11-17
+# Updated 2023-12-04
 # Created 2023-11-09
 
 # ---------------------------------------------------------------------------------------------------------------
 
 # %%
 import os
-# import json
 import glob
 from my_imaging_tools import fmri_tools
 
-site = 'NKI'
-clusterdir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
-scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
-drivedir = f'/Volumes/EVO_Estia/EVO_MRI/organized/{site}' # where subject folders are located
+sites = ['NKI','UW']
+# clusterdir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+# scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
+# drivedir = f'/Volumes/EVO_Estia/EVO_MRI/organized/{site}' # where subject folders are located
 
-q = fmri_tools(drivedir)
-
-# %% Check that task files are in the right run subdirectories before renaming
+# q = fmri_tools(drivedir)
 tasks = ['floop','adjective'] # task names as they appear in your filenames and directories
 runs = ['1','2']
 sessions = ['1','2']
-subs = ['97018','97019','97020','97021','97022','97023','97024','97025'] # redo; didn't copy task files correctly
 
-cmd = [None]
-for sub in subs:
-    tdir = f'{drivedir}/{sub}/func/unprocessed/task'
-    for task in tasks:
-        for session in sessions:
-            taskdir = f'{tdir}/{task}/session_{session}'
-            rawdir = f'/Volumes/EVO_Estia/EVO_MRI/raw/{site}/{sub}_{session}'
-            raw_taskfiles = glob.glob(f'{rawdir}/*{task}*')
-            for file in raw_taskfiles:
-                cmd[0] = f'cp -r {file} {taskdir}'
-                q.exec_cmds(cmd)
+# # %% Check that task files are in the right run subdirectories before renaming
+# tasks = ['floop','adjective'] # task names as they appear in your filenames and directories
+# runs = ['1','2']
+# sessions = ['1','2']
+# subs = ['97018','97019','97020','97021','97022','97023','97024','97025'] # redo; didn't copy task files correctly
+
+# cmd = [None]
+# for sub in subs:
+#     tdir = f'{drivedir}/{sub}/func/unprocessed/task'
+#     for task in tasks:
+#         for session in sessions:
+#             taskdir = f'{tdir}/{task}/session_{session}'
+#             rawdir = f'/Volumes/EVO_Estia/EVO_MRI/raw/{site}/{sub}_{session}'
+#             raw_taskfiles = glob.glob(f'{rawdir}/*{task}*')
+#             for file in raw_taskfiles:
+#                 cmd[0] = f'cp -r {file} {taskdir}'
+#                 q.exec_cmds(cmd)
 
             # for run in runs:
             #     taskdir = f'{tdir}/{task}/session_{session}'
@@ -54,28 +56,27 @@ for sub in subs:
                 #             cmd[0] = f'mv -vn {file} {tdir}/{task}/session_{session}/run_1'
                 #             q.exec_cmds(cmd)
                         
-# %% Rename files on hard drive
-tasks = ['floop','adjective'] # task names as they appear in your filenames and directories
-runs = ['1','2']
-sessions = ['1','2']
-extensions = ['.nii.gz','.json'] # rename both JSON and NIFTI files
+# # %% Rename files on hard drive for ME Pipeline
+# tasks = ['floop','adjective'] # task names as they appear in your filenames and directories
+# runs = ['1','2']
+# sessions = ['1','2']
+# # extensions = ['.nii.gz','.json'] # rename both JSON and NIFTI files
 
-cmd = [None]
-for sub in q.subs:
-    tdir = f'{drivedir}/{sub}/func/unprocessed/task'
-    for task in tasks:
-        for session in sessions:
-            for run in runs:
-                taskdir = f'{tdir}/{task}/session_{session}/run_{run}'
-                new_filename = f'{sub}_S{session}_R{run}_{task}'
+# cmd = [None]
+# for sub in q.subs:
+#     tdir = f'{drivedir}/{sub}/func/unprocessed/task'
+#     for task in tasks:
+#         for session in sessions:
+#             for run in runs:
+#                 taskdir = f'{tdir}/{task}/session_{session}/run_{run}'
+#                 new_filename = f'{task}_S{session}_R{run}_E{1}' # file name required for ME Pipeline
 
-                # bash-$ find /path/to/file -name orginalFileName.extension -exec mv {} /path/to/NewFileName.extension \;
-                # for ext in extensions:
-                cmd_pt1 = f"find {taskdir} -name '*.json' -exec mv "
-                cmd_pt2 = "{}"
-                cmd_pt3 = f" {taskdir}/{new_filename}.json"
-                cmd[0] = f'{cmd_pt1}{cmd_pt2}{cmd_pt3} \;'
-                q.exec_cmds(cmd)
+#                 # bash-$ find /path/to/file -name orginalFileName.extension -exec mv {} /path/to/NewFileName.extension \;
+#                 cmd_pt1 = f"find {taskdir} -name '*.nii.gz' -exec mv "
+#                 cmd_pt2 = "{}"
+#                 cmd_pt3 = f" {taskdir}/{new_filename}.nii.gz"
+#                 cmd[0] = f'{cmd_pt1}{cmd_pt2}{cmd_pt3} \;'
+#                 q.exec_cmds(cmd)
 
 # # %% Print subject sessions missing task JSON files
 # import os
@@ -106,9 +107,55 @@ for sub in q.subs:
 # missing_txt.close()
 
 
-# # %% Copy renamed files from HDD to cluster dir
-# cmd = [None]
-# for sub in q.subs:
-#     initdir = f'{drivedir}/{sub}/func/unprocessed/task'
-#     destdir = f'{clusterdir}/{sub}/func/unprocessed'
-#     cmd[0] = f'cp -r {initdir} {destdir}'
+# %% Copy renamed files from HDD to cluster dir
+cmd = [None]*1
+for site in sites:
+    clusterdir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+    drivedir = f'/home/hob4003/thinclient_drives/EVO_Esti/EVO_MRI/organized/{site}' # where subject folders are located (copy from '/thinclient_drives')
+    q = fmri_tools(drivedir)
+
+    for sub in q.subs:
+        for task in tasks:
+            for session in sessions:
+                for run in runs:
+                    initdir = f'{drivedir}/{sub}/func/unprocessed/task/{task}/session_{session}/run_{run}'
+                    destdir = f'{clusterdir}/{sub}/func/unprocessed/task/{task}/session_{session}/run_{run}'
+
+		            # remove files currently in cluster dir that have wrong names for MEP
+                    # wrongname_files = glob.glob(f'{destdir}/*')
+                    # for wrongname_f in wrongname_files:    
+                    cmd[0] = f'rm {destdir}/*'
+                    q.exec_cmds(cmd)
+
+		            # copy correctly-named task files from HDD to cluster dir
+                    cmd[0] = f'cp -r {initdir}/* {destdir}'
+                    q.exec_cmds(cmd)
+
+                    # rm left-over files from running MEP on resting-state data
+                    leftover_txt = f'{clusterdir}/{sub}/AllScans.txt'
+                    if os.path.isfile(leftover_txt):
+                        cmd[0] = f'rm {leftover_txt}'
+                        q.exec_cmds(cmd)
+
+# %% Get number of vols for all task files; use to check file names and dirs
+# adjective should have 200 vols; floop should have 183 vols
+cmd = [None]*1
+sites = ['UW']
+tasks = ['floop']
+
+for site in sites:
+    drivedir = f'/Volumes/EVO_Estia/EVO_MRI/organized/{site}' # where subject folders are located (copy from '/thinclient_drives')
+    q = fmri_tools(drivedir)
+
+    for sub in q.subs:
+        print(f'\n')
+        print(sub)
+
+        for task in tasks:
+            for session in sessions:
+                for run in runs:
+                    initdir = f'{drivedir}/{sub}/func/unprocessed/task/{task}/session_{session}/run_{run}'
+                    cmd[0] = f'fslnvols {initdir}/{task}_S{session}_R{run}_E1.nii.gz'
+                    q.exec_cmds(cmd)
+
+# %%
