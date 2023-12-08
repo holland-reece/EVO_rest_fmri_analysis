@@ -6,6 +6,8 @@
 # usage:
 # bash create_subj_volume_parcellation -L <subject_list> -a <name_of_annot_file> -f <first_subject_row> -l <last_subject_row> -d <name_of_output_dir>
 # 
+# EVO Example Command:
+# ./create_subj_volume_parcellation.sh -L '/home/holland/Desktop/EVO_TEST/subjects/subjectslist.txt' -a 'HCP-MMP1' -d '/home/holland/Desktop/EVO_TEST/HCP-MMP1_fsaverage_masks' -m YES
 # 
 # HOW TO USE
 # 
