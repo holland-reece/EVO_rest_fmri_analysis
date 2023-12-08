@@ -6,8 +6,9 @@
 # usage:
 # bash create_subj_volume_parcellation -L <subject_list> -a <name_of_annot_file> -f <first_subject_row> -l <last_subject_row> -d <name_of_output_dir>
 # 
-# EVO Example Command:
+# EVO Example Command (run from this script, saved in /home/holland/Desktop/EVO_TEST/subjects/):
 # ./create_subj_volume_parcellation.sh -L '/home/holland/Desktop/EVO_TEST/subjects/subjectslist.txt' -a 'HCP-MMP1' -d '/home/holland/Desktop/EVO_TEST/HCP-MMP1_fsaverage_masks' -m YES
+# ./create_subj_volume_parcellation.sh -L '/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data/EVOsubjects_test.txt' -a 'HCP-MMP1' -d '/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric/HCP-MMP1_fsaverage_masks' -m YES
 # 
 # HOW TO USE
 # 
@@ -39,8 +40,12 @@
 
 
 # export FREESURFER_HOME=/usr/local/freesurfer
-source $FREESURFER_HOME/SetUpFreeSurfer.sh # HRB: make sure FreeSurfer path is in env
-SUBJECTS_DIR="/home/holland/Desktop/EVO_TEST/subjects" # HRB: set preprocessed data dir manually
+# source $FREESURFER_HOME/SetUpFreeSurfer.sh # HRB: make sure FreeSurfer path is in env
+export FREESURFER_HOME="/home/software/apps/freesurfer6/6.0/freesurfer" # cluster path to FreeSurfer
+source "${FREESURFER_HOME}/SetUpFreeSurfer.sh"
+
+# SUBJECTS_DIR="/home/holland/Desktop/EVO_TEST/subjects" # HRB: set preprocessed data dir manually
+SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
 
 # define compulsory and optional arguments
 while getopts ":L:f:l:a:d::m:t:s:" o; do
