@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-12-01
+# Updated 2023-12-12
 # Created 2023-12-01
 
 # EVO manually exclude:
@@ -14,6 +14,7 @@
 
 # %%
 import os
+import glob
 from my_imaging_tools import fmri_tools
 
 maindatadir = f'/Volumes/EVO_Estia/EVO_MRI/organized/'
@@ -32,6 +33,28 @@ sessions = ['1','2']
 task_runs = ['1','2']
 rest_runs = ['1']
 tasks = ['adjective','floop']
+
+# %% Get list of subjects without JSON files
+adj = open(f'/Users/holland_brown_ra/Desktop/missing_adjective_jsons.txt','w')
+flo = open(f'/Users/holland_brown_ra/Desktop/missing_floop_jsons.txt','w')
+
+for site in sites:
+    datadir = f'{maindatadir}/{site}'
+    q = fmri_tools(datadir) # get subject list and initialize functions
+    for sub in q.subs:
+        for session in sessions:
+            if os.path.isdir(f'{datadir}/{sub}/func/unprocessed/rest/session_{session}'):
+                for task in tasks:
+                    task_jsons = glob.glob(f'{datadir}/{sub}/func/unprocessed/task/{task}/session_{session}/run_*/*.json')
+                    if len(task_jsons) < 2:
+                        if task == 'adjective':
+                            adj.write(f'{sub}_{session}\t{len(task_jsons)}\n')
+                        if task == 'floop':
+                            flo.write(f'{sub}_{session}\t{len(task_jsons)}\n')
+adj.close()
+flo.close()
+
+    
 
 # %% Create list of subjects to exclude based on motion QA
 
