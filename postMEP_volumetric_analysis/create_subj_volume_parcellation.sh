@@ -44,6 +44,8 @@
 export FREESURFER_HOME="/home/software/apps/freesurfer6/6.0/freesurfer" # cluster path to FreeSurfer
 source "${FREESURFER_HOME}/SetUpFreeSurfer.sh"
 
+module load fsl # need this to generate masks on cluster
+
 # SUBJECTS_DIR="/home/holland/Desktop/EVO_TEST/subjects" # HRB: set preprocessed data dir manually
 SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
 
