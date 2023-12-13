@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-11-29
+# Updated 2023-12-13
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -19,82 +19,95 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
+datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
-wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
+# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
+# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+# wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
 sessions = ['1','2']
+runs = ['1']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 input_nifti = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
 
-# %% Use FreeSurfer script to create volumetric ROI mask from Glasser MMP atlas for each subject
-subject_list = f'subjectslist.txt'
-annot_file = f'HCP-MMP1'
-output_dir = f'{home_dir}/'
-
-cmd = [None]
+# %% Create ROI masks for each subject
 for sub in q.subs:
-    cmd = f'create_subj_volume_parcellation -L <subject_list> -a <name_of_annot_file> -d <name_of_output_dir>'
+    for roi in rois:
+        hcp_parcs_dir = f'' # subject's HCP-MMP1 roi masks dir
 
-# %% Run linear model for each subject, each ROI, and each session, comparing wholebrain to ROI activation
+# %% Extract timeseries from ROIs for input into Level 1 analysis (ref: ROI_timeseries.sh)
+# fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
+cmd=[None]
+for sub in q.subs:
+    for session in sessions:
+        for run in runs:
+            for roi in rois:
+                mask = f'{datadir}/{sub}/func/rest/rois/{roi}_bin.nii.gz' # subjects binarized ROI mask
+                func_nifti = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_E1_acpc.nii.gz' # subject rest func nifti
+                roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt' # output text file containing ROI time series
+
+                if os.path.exists(f'{roi_ts}') == False:
+                    # print(f'Extracting ROI time series for {sub}...\n')
+                    cmd[0] = f'fslmeants -i {func_nifti} -o {roi_ts} -m {mask}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                    q.exec_cmds(cmd) # execute bash commands in system terminal
+                # else:
+                #     print(f'ROI time series file already exists for subject {sub}...\n')
+
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f''
 feat_df = f''
+func_fn = 'Rest_E1_acpc.nii.gz'
 
+cmd=[None]
+commands = [None]*8
 for sub in q.subs:
     for session in sessions:
+            for run in runs:
+                # func_nifti = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_E1_acpc.nii.gz'
 
-        # get TR (i.e. timestep) from JSON
-        json = f'{datadir}/{sub}/func/unprocessed/session_{session}/run_1/Rest_S{session}_R1_E1.json'
-        with open(f'{datadir}/{sub}/func/unprocessed/rest/session_{session}/run_1/Rest_S{session}_R1_E1.json', 'rt') as func_json:
-            func_info = json.load(func_json)
-        timestep = func_info['RepetitionTime']
-        print(timestep)
+                # Get TR (i.e. timestep) from JSON
+                json = f'{datadir}/{sub}/func/unprocessed/session_{session}/run_{run}/Rest_S{session}_R1_E1.json'
+                with open(f'{datadir}/{sub}/func/unprocessed/rest/session_{session}/run_{run}/Rest_S{session}_R1_E1.json', 'rt') as func_json:
+                    func_info = json.load(func_json)
+                timestep = func_info['RepetitionTime']
+                # print(timestep)
+                
+                for roi in rois:
+                    session_dir = f'{datadir}/{sub}/func/rest/rois/{roi}/session_{session}'
+                    outdir = f'{session_dir}/run_{run}'
 
-        for roi in rois:
-            # Step 1 commands search and replace terms in design file that are the same for all subjects
-            cmd_step1 = [None]*5
-            if os.path.exists(f'{datadir}/{feat_fn}')==False:
-                cmd_step1[0] = f'cp {feat_df} {datadir}' # copy design file into preproc dir
-                print(f'Creating generalized Feat design file for all analyses...\n')
+                    if os.path.isdir(session_dir)==False:
+                        cmd[0] = f'mkdir {session_dir}'
+                        q.exec_cmds(cmd)
 
-                # Linux search-and-replace commands
-                cmd_step1[1] = f"sed -i 's/ROI/{roi}/g' {datadir}/{feat_fn}" # search-and-replace roi in design file
-                cmd_step1[2] = f"sed -i 's/TIMESTEP/{timestep}/g' {datadir}/{feat_fn}" # search-and-replace TR in design file
-                cmd_step1[3] = f"sed -i 's/INPUTNIFTI/{nifti_fn}/g' {datadir}/{feat_fn}" # search-and-replace nifti input file name (still have to put correct path into design file before running)
-                cmd_step1[4] = f"sed -i 's/REGIONOFINTERESTTXT/{roi_tn}/g' {datadir}/{feat_fn}" # search-and-replace ROI text file name (still have to put correct path into design file before running)
+                    if os.path.isdir(outdir)==False:
+                        cmd[0] = f'mkdir {outdir}'
+                        q.exec_cmds(cmd)
 
-            elif os.path.exists(f'{datadir}/{feat_fn}')==True:
-                cmd_step1[0] = ''
-                print("Generalized Feat design file already exists in main data directory.")
+                    # roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt'
+                    roi_tn = f'{roi}_S{session}_R{run}_timepoints.txt'
 
+                    # Create design.fsf template for this ROI
+                    if os.path.isfile(f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_design.fsf')==False:
+                        commands[0] = f'cp {feat_df} {outdir}' # copy design file into preproc dir
+                        commands[1] = f"sed -i 's/ROI/{roi}/g' {outdir}/{feat_fn}"
+                        commands[2] = f"sed -i 's/TIMESTEP/{timestep}/g' {outdir}/{feat_fn}"
+                        commands[3] = f"sed -i 's/INPUTNIFTI/{func_fn}/g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
+                        commands[4] = f"sed -i 's/REGIONOFINTERESTTXT/{roi_tn}/g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
+                        commands[5] = f"sed -i 's/SUBJ/{sub}/g' {outdir}/{feat_fn}"
+                        commands[6] = f"sed -i 's/SESSION/{session}/g' {outdir}/{feat_fn}"
+                        commands[7] = f"sed -i 's/MRIRUN/{run}/g' {outdir}/{feat_fn}"
+                        q.exec_cmds(commands)
 
-            for sub in subs: # Step 2 commands search and replace terms that are different for each participant
-                print(f'Creating Feat design file for subject {sub}...\n')
-                cmd_step2 = ['','','']
-                outdir = f'{datadir}/{sub}/{roi}'
-                cmd_step2[0] = f'cp {datadir}/{feat_fn} {outdir}' # copy design file into preproc dir
+                    cmd[0] = f'feat {outdir}/{feat_fn}' # run fsf file
+                    q.exec_cmds(cmd)
 
-                if operating_system == 0: # Linux search-and-replace commands
-                    cmd_step2[1] = f"sed -i 's/SUBJ/{sub}/g' {outdir}/{feat_fn}" # search-and-replace subject in design file
-                elif operating_system == 1: # MacOS search-and-replace commands
-                    cmd_step2[1] = f"sed -i '' s/SUBJ/{sub}/g {outdir}/{feat_fn}" # search-and-replace roi in design file
-                cmd_step2[2] = f'feat {outdir}/{feat_fn}' # run fsf file
-                exec_cmds(cmd_step2) # execute bash commands in system terminal
-                print(f'Running Feat analysis for {sub}...\n')
-            print('Feat analyses done.\n\n')
+                    print(f'\n-------- Running Feat analysis for {sub} --------\n')
+print('\n-------- Feat analyses done. --------\n\n')
 
-            for sub in q.subs:
-            outdir = f'{datadir}/{sub}/{roi}'
-            cmd=f'feat {outdir}/{feat_fn}'
-            print(f'Running Feat analysis for {sub}...\n')
-            q.exec_cmds([cmd])
-            print('Feat analyses done.\n\n')
 
 
 # %% Run linear model for each subject
