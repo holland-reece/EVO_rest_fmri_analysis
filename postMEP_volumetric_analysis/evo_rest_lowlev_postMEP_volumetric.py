@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-12-13
+# Updated 2023-12-14
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -14,29 +14,83 @@
 # --------------------------------------------------------------------------------------
 # %%
 import os
-# import json
+import json
 import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
+# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO' # where subject folders are located
 # scriptdir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rs_lower_levels' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'/software/apps/Connectome_Workbench_test/workbench/exe_rh_linux64/wb_command' # /path/to/wb_command package
 
-# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
+datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
 # wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
 sessions = ['1','2']
 runs = ['1']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
-input_nifti = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
+# func_fn = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
+func_fn = 'Rest_E1_acpc'
 
 # %% Create ROI masks for each subject
-for sub in q.subs:
-    for roi in rois:
-        hcp_parcs_dir = f'' # subject's HCP-MMP1 roi masks dir
+subs = ['97048']
+sessions = ['1','2']
+# rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+rois = ['L_MFG']
+
+cmd = [None]*3
+for roi in rois:
+
+    # ROI parcel names from HCP MMP1.0 atlas labels
+    if roi == 'R_MFG':
+        roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
+    elif roi == 'L_MFG':
+        roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
+    elif roi == 'R_dACC':
+        roi_parcels = ['R_p24pr_ROI','R_33pr_ROI','R_a24pr_ROI'] # R_dACC
+    elif roi == 'L_dACC':
+        roi_parcels = ['L_p24pr_ROI','L_33pr_ROI','L_a24pr_ROI'] # L_dACC
+    elif roi == 'R_rACC':
+        roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
+    elif roi == 'L_rACC':
+        roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
+
+    for sub in subs:
+        for session in sessions:
+            for run in runs:
+                # directories
+                roidir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric' # output dir for volumetric roi analysis
+                sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks/masks' # subject's HCP-MMP1 roi masks dir
+
+                # mask file names
+                mask_out = f'{roidir}/{roi}_S{session}_R{run}'
+                mask_bin_out = f'{mask_out}_bin' # binarized
+
+                # files for time-series extraction
+                func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}.nii.gz'
+                roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries.txt'
+
+                # Create subject volumetric ROI dir if needed
+                if os.path.isdir(roidir)==False:
+                    q.create_dirs(roidir)
+                # if os.path.isdir(f'{roidir}/{sub}_{roi}_HCP-MMP1_vol_parcs')==False:
+                    # q.create_dirs(f'{roidir}/{sub}_{roi}_HCP-MMP1_vol_parcs')
+
+                # Structure fslmaths command string with all roi parcels
+                cmd_str = f'fslmaths'
+                for p in roi_parcels:
+                    if p == roi_parcels[0]:
+                        cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/{p}'
+                    else:
+                        cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
+
+                cmd[0] = f'{cmd_str} {mask_out}'
+                cmd[1] = f'fslmaths {mask_out} -bin {mask_bin_out}'
+                cmd[2] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                q.exec_cmds(cmd)
+
 
 # %% Extract timeseries from ROIs for input into Level 1 analysis (ref: ROI_timeseries.sh)
 # fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
@@ -45,7 +99,8 @@ for sub in q.subs:
     for session in sessions:
         for run in runs:
             for roi in rois:
-                mask = f'{datadir}/{sub}/func/rest/rois/{roi}_bin.nii.gz' # subjects binarized ROI mask
+                roidir = 
+                mask = f'{roidir}/{roi}_S{session}_R{run}' # subjects binarized ROI mask
                 func_nifti = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_E1_acpc.nii.gz' # subject rest func nifti
                 roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt' # output text file containing ROI time series
 
@@ -59,7 +114,6 @@ for sub in q.subs:
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f''
 feat_df = f''
-func_fn = 'Rest_E1_acpc.nii.gz'
 
 cmd=[None]
 commands = [None]*8
