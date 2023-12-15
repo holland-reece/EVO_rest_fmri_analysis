@@ -7,6 +7,9 @@
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
 
+# Notes:
+    # subject's anat in functional space >> /func/xfms/rest/T1w_acpc_brain_func.nii.gz
+
 # Sources:
     # HCP-MMP1.0 projected onto fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_projected_on_fsaverage/3498446
     # script to create subject-specific parcellated image in fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_volumetric_NIfTI_masks_in_native_structural_space/4249400?file=13320527
@@ -25,6 +28,7 @@ site = 'NKI'
 
 home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
 datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+# fsl_template = f"/home/holland/fsl/data/standard/MNI152_T1_2mm_brain"
 # wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
@@ -40,7 +44,9 @@ sessions = ['1','2']
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG']
 
-cmd = [None]*3
+identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
+
+cmd = [None]*4
 for roi in rois:
 
     # ROI parcel names from HCP MMP1.0 atlas labels
@@ -86,12 +92,24 @@ for roi in rois:
                     else:
                         cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
 
-                cmd[0] = f'{cmd_str} {mask_out}'
-                cmd[1] = f'fslmaths {mask_out} -bin {mask_bin_out}'
-                cmd[2] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
+                cmd[1] = f'flirt -interp nearestneighbour -in {mask_out}.nii.gz -ref {func_in} -out {mask_out}_funcspace.nii.gz -applyxfm -init {identity_mat}' # transform masks in subj anat space to func space
+                cmd[2] = f'fslmaths {mask_out}_funcspace -bin {mask_bin_out}' # binarize
+                cmd[3] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
 
+# %% Use applywarp to transform functional data to standard space (after ICA-AROMA)
+# for sub in subs:
+#     featdir = f'{datadir}/{sub}/rest_preproc.feat'
+#     std = f'{featdir}/reg/standard.nii.gz'
+#     infile = f'{featdir}/filtered_func_denois_bptf.nii.gz'
+#     outfile = f'{featdir}/filt_func_denois_bptf_mni.nii.gz'
+#     warpfile = f'{featdir}/reg/example_func2standard_warp.nii.gz'
+#     # prematfile = f'{featdir}/reg/example_func2highres.mat'
 
+#     cmd=f'applywarp --ref={std} --in={infile} --out={outfile} --warp={warpfile}'
+#     exec_cmds([cmd])
+  
 # %% Extract timeseries from ROIs for input into Level 1 analysis (ref: ROI_timeseries.sh)
 # fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
 cmd=[None]
