@@ -71,6 +71,7 @@ for roi in rois:
                 sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks/masks' # subject's HCP-MMP1 roi masks dir
 
                 # mask file names
+                ref_img = f'{datadir}/{sub}/func/xfms/rest/T1w_acpc_brain_func.nii.gz' # reference image for Flirt realignment of ROI mask
                 mask_out = f'{roidir}/{roi}_S{session}_R{run}'
                 mask_bin_out = f'{mask_out}_bin' # binarized
 
@@ -93,10 +94,11 @@ for roi in rois:
                         cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
 
                 cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
-                cmd[1] = f'flirt -interp nearestneighbour -in {mask_out}.nii.gz -ref {func_in} -out {mask_out}_funcspace.nii.gz -applyxfm -init {identity_mat}' # transform masks in subj anat space to func space
+                cmd[1] = f'flirt -interp nearestneighbour -in {mask_out}.nii.gz -ref {ref_img} -out {mask_out}_funcspace.nii.gz -applyxfm -init {identity_mat}' # transform masks in subj anat space to func space
                 cmd[2] = f'fslmaths {mask_out}_funcspace -bin {mask_bin_out}' # binarize
                 cmd[3] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
+
 
 # %% Use applywarp to transform functional data to standard space (after ICA-AROMA)
 # for sub in subs:
