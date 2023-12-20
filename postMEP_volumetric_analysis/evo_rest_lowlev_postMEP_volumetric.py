@@ -36,17 +36,17 @@ sessions = ['1','2']
 runs = ['1']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 # func_fn = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
-func_fn = 'Rest_E1_acpc'
+func_fn = 'denoised_func_data_aggr'
 
 # %% Create ROI masks for each subject
 subs = ['97048']
-sessions = ['1','2']
+sessions = ['2']
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG']
 
 identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
-cmd = [None]*4
+cmd = [None]*5
 for roi in rois:
 
     # ROI parcel names from HCP MMP1.0 atlas labels
@@ -76,7 +76,7 @@ for roi in rois:
                 mask_bin_out = f'{mask_out}_bin' # binarized
 
                 # files for time-series extraction
-                func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}.nii.gz'
+                func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}'
                 roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries.txt'
 
                 # Create subject volumetric ROI dir if needed
@@ -94,9 +94,10 @@ for roi in rois:
                         cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
 
                 cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
-                cmd[1] = f'flirt -interp nearestneighbour -in {mask_out}.nii.gz -ref {ref_img} -out {mask_out}_funcspace.nii.gz -applyxfm -init {identity_mat}' # transform masks in subj anat space to func space
-                cmd[2] = f'fslmaths {mask_out}_funcspace -bin {mask_bin_out}' # binarize
-                cmd[3] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                cmd[1] = f'flirt -in {mask_out}.nii.gz -ref {func_in} -out {mask_out}_funcspace.nii.gz -applyxfm -init {datadir}/{sub}/func/xfms/rest/AvgSBref2acpc_EpiReg_init.mat'# -init {identity_mat}' # transform masks in subj anat space to func space
+                cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
+                cmd[3] = f'fslmaths {mask_out}_funcspace.nii.gz -bin -thr 0.9 {mask_bin_out}' # binarize
+                cmd[4] = f'fslmeants -i {func_in}.nii.gz -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
 
 
