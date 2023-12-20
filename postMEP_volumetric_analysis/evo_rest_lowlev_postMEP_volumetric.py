@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-12-14
+# Updated 2023-12-20
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -94,8 +94,9 @@ for roi in rois:
                         cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
 
                 cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
-                cmd[1] = f'flirt -in {mask_out}.nii.gz -ref {func_in} -out {mask_out}_funcspace.nii.gz -applyxfm -init {datadir}/{sub}/func/xfms/rest/AvgSBref2acpc_EpiReg_init.mat'# -init {identity_mat}' # transform masks in subj anat space to func space
-                cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
+                cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reorient2fsl' # fix orientation of HCP-MMP1 masks to FSL standard orientation
+                cmd[2] = f'flirt -in {mask_out}_reorient2fsl -ref {ref_img} -out {mask_out}_funcspace.nii.gz -applyxfm -init {datadir}/{sub}/func/xfms/rest/AvgSBref2acpc_EpiReg_init.mat'# -init {identity_mat}' # transform masks in subj anat space to func space
+                # cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
                 cmd[3] = f'fslmaths {mask_out}_funcspace.nii.gz -bin -thr 0.9 {mask_bin_out}' # binarize
                 cmd[4] = f'fslmeants -i {func_in}.nii.gz -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
