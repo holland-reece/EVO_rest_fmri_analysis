@@ -8,7 +8,7 @@
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
 
 # Notes:
-    # subject's anat in functional space >> /func/xfms/rest/T1w_acpc_brain_func.nii.gz
+    # Run bash-$ source $FREESURFER_HOME/SetUpFreeSurfer.sh in shell before running (needed for FreeSurfer bbregister call)
 
 # Sources:
     # HCP-MMP1.0 projected onto fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_projected_on_fsaverage/3498446
@@ -46,18 +46,19 @@ for sub in q.subs:
     for session in sessions:
         for run in runs:
             sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # path to Glasser atlas in subject func space
-            glasser_atlas_in = f'{sub_parc_niftis_dir}/HCP-MMP1' # input subject atlas filename
-            glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # output subject atlas filename
-            flirt_reference = f'{datadir}/{sub}/func/session_{session}/run_{run}/Rest_ICAAROMA.nii.gz/{func_fn}' # reference for Flirt ailgnment: functional data
+            glasser_atlas_in = f'{sub_parc_niftis_dir}/HCP-MMP1' # input subject atlas filename (no ext)
+            glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # output subject atlas filename (no ext)
+            # flirt_reference = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA.nii.gz/{func_fn}' # reference for Flirt ailgnment: functional data
+            flirt_reference = f'{datadir}/{sub}/func/xfms/T1w_acpc_brain_func'
+
 
             cmd[0] = f'fslreorient2std {glasser_atlas_in} {glasser_atlas_in}_reoriented' # reorient FS HCP-MMP1 to FSL standard orientation
-            cmd[1] = f"flirt -interp='nearestneighbour' -in {glasser_atlas_in}_reoriented.nii.gz -ref {flirt_reference} -out {glasser_atlas_out}.nii.gz -omat {glasser_atlas_out}.mat" # flirt alignment to anat space -> get transform matrix
+            cmd[1] = f"flirt -interp nearestneighbour -in {glasser_atlas_in}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {glasser_atlas_out}.nii.gz -omat {glasser_atlas_out}.mat" # flirt alignment to func space -> get transform matrix
+            # cmd[2] = f'flirt -interp nearestneighbor -in {func_in} {glasser_atlas_in}_reoriented.nii.gz' # register func data to subject FS space
             q.exec_cmds(cmd)
 
 
-# %% Create ROI masks for each subject and align them to subjects' functional space; extract ROI time series
-subs = ['97048']
-sessions = ['2']
+# %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG']
 
@@ -78,17 +79,18 @@ for roi in rois:
     elif roi == 'L_rACC':
         roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
-    for sub in subs:
+    for sub in q.subs:
         for session in sessions:
             for run in runs:
                 # directories
                 roidir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric' # output dir for volumetric roi analysis
                 sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # subject's HCP-MMP1 roi masks dir
 
-                # mask file names
+                # files for mask creation & Flirt alignment
+                # flirt_reference = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}'
                 flirt_reference = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # ref img for ROI mask Flirt realign: funcspace subject Glasser atlas
-                mask_out = f'{roidir}/{roi}_S{session}_R{run}'
-                mask_bin_out = f'{mask_out}_bin' # binarized
+                # flirt_reference = f'{datadir}/{sub}/func/xfms/T1w_acpc_brain_func'
+                mask_out = f'{roidir}/{roi}_S{session}_R{run}' # mask comprised of Glasser ROI parcels; prefix for other ROI mask output files
 
                 # files for time-series extraction
                 func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}'
@@ -97,8 +99,6 @@ for roi in rois:
                 # Create subject volumetric ROI dir if needed
                 if os.path.isdir(roidir)==False:
                     q.create_dirs(roidir)
-                # if os.path.isdir(f'{roidir}/{sub}_{roi}_HCP-MMP1_vol_parcs')==False:
-                    # q.create_dirs(f'{roidir}/{sub}_{roi}_HCP-MMP1_vol_parcs')
 
                 # Structure fslmaths command string with all roi parcels
                 cmd_str = f'fslmaths'
@@ -108,30 +108,13 @@ for roi in rois:
                     else:
                         cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
 
-                cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
-                cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reorient2fsl' # fix orientation of HCP-MMP1 masks to FSL standard orientation
-                # cmd[2] = f"applywarp --ref=/home/holland/Desktop/EVO_TEST/subjects/97048/func/rest/qa/CoregQA/SBref2acpc_EpiReg+BBR_AvgFM_S2_R1.nii.gz --in={mask_out}_reorient2fsl --out={mask_out}_funcspace --mask=/home/holland/Desktop/EVO_TEST/subjects/97048/func/xfms/rest/T1w_acpc_brain_func_mask.nii.gz --interp='nn' --verbose --postmat={datadir}/{sub}/anat/T1w/AverageT1wImages/T1w1_gdc_std2roi.mat"
-                # cmd[2] = f"applywarp --ref={datadir}/{sub}/ --in={mask_out}_reorient2fsl --out={mask_out}_funcspace --mask=/home/holland/Desktop/EVO_TEST/subjects/97048/func/xfms/rest/T1w_acpc_brain_func_mask.nii.gz --interp='nn'" #--postmat={datadir}/{sub}/anat/T1w/AverageT1wImages/T1w1_gdc_std2roi.mat'
-
-                # cmd[2] = f"flirt -in {mask_out}_reorient2fsl -ref /home/holland/Desktop/EVO_TEST/subjects/97048/func/rest/qa/CoregQA/SBref2acpc_EpiReg+BBR_AvgFM_S2_R1.nii.gz -out {mask_out}_funcspace -applyxfm"# -init /home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat' # transform mask dims to match func data
-                cmd[2] = f'flirt -in {mask_out}_reorient2fsl -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc -applyxfm -init {flirt_reference}.mat'
+                cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
+                cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
+                cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
                 # cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
-                cmd[3] = f'fslmaths {mask_out}_denoiseaggrfunc -bin {mask_bin_out}' # binarize
-                cmd[4] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                cmd[3] = f'fslmaths {mask_out}_denoiseaggrfunc -bin {mask_out}_denoiseaggrfunc_bin' # binarize
+                cmd[4] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_out}_denoiseaggrfunc_bin' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
-
-
-# %% Use applywarp to transform functional data to standard space (after ICA-AROMA)
-# for sub in subs:
-#     featdir = f'{datadir}/{sub}/rest_preproc.feat'
-#     std = f'{featdir}/reg/standard.nii.gz'
-#     infile = f'{featdir}/filtered_func_denois_bptf.nii.gz'
-#     outfile = f'{featdir}/filt_func_denois_bptf_mni.nii.gz'
-#     warpfile = f'{featdir}/reg/example_func2standard_warp.nii.gz'
-#     # prematfile = f'{featdir}/reg/example_func2highres.mat'
-
-#     cmd=f'applywarp --ref={std} --in={infile} --out={outfile} --warp={warpfile}'
-#     exec_cmds([cmd])
   
 # %% Extract timeseries from ROIs for input into Level 1 analysis (ref: ROI_timeseries.sh)
 # fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
