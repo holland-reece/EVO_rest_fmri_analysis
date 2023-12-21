@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-12-20
+# Updated 2023-12-21
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -28,23 +28,38 @@ site = 'NKI'
 
 home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
 datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
+
 # fsl_template = f"/home/holland/fsl/data/standard/MNI152_T1_2mm_brain"
 # wb_command = f'wb_command' # /path/to/wb_command package, or just 'wb_command'
 
 q = fmri_tools(datadir)
-sessions = ['1','2']
+sessions = ['2']
 runs = ['1']
 rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 # func_fn = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
 func_fn = 'denoised_func_data_aggr'
 
-# %% Create ROI masks for each subject
+# %% First, align HCP-MMP1 in subject's FreeSurfer space to subject's anatomical -> get right pixel dims
+cmd=[None]*2
+for sub in q.subs:
+    for session in sessions:
+        for run in runs:
+            sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # path to Glasser atlas in subject func space
+            glasser_atlas_in = f'{sub_parc_niftis_dir}/HCP-MMP1' # input subject atlas filename
+            glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # output subject atlas filename
+            flirt_reference = f'{datadir}/{sub}/func/session_{session}/run_{run}/Rest_ICAAROMA.nii.gz/{func_fn}' # reference for Flirt ailgnment: functional data
+
+            cmd[0] = f'fslreorient2std {glasser_atlas_in} {glasser_atlas_in}_reoriented' # reorient FS HCP-MMP1 to FSL standard orientation
+            cmd[1] = f"flirt -interp='nearestneighbour' -in {glasser_atlas_in}_reoriented.nii.gz -ref {flirt_reference} -out {glasser_atlas_out}.nii.gz -omat {glasser_atlas_out}.mat" # flirt alignment to anat space -> get transform matrix
+            q.exec_cmds(cmd)
+
+
+# %% Create ROI masks for each subject and align them to subjects' functional space; extract ROI time series
 subs = ['97048']
 sessions = ['2']
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG']
-
-identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
 cmd = [None]*5
 for roi in rois:
@@ -68,10 +83,10 @@ for roi in rois:
             for run in runs:
                 # directories
                 roidir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric' # output dir for volumetric roi analysis
-                sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks/masks' # subject's HCP-MMP1 roi masks dir
+                sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # subject's HCP-MMP1 roi masks dir
 
                 # mask file names
-                ref_img = f'{datadir}/{sub}/func/xfms/rest/T1w_acpc_brain_func.nii.gz' # reference image for Flirt realignment of ROI mask
+                flirt_reference = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # ref img for ROI mask Flirt realign: funcspace subject Glasser atlas
                 mask_out = f'{roidir}/{roi}_S{session}_R{run}'
                 mask_bin_out = f'{mask_out}_bin' # binarized
 
@@ -89,16 +104,20 @@ for roi in rois:
                 cmd_str = f'fslmaths'
                 for p in roi_parcels:
                     if p == roi_parcels[0]:
-                        cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/{p}'
+                        cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/masks/{p}'
                     else:
-                        cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/{p}'
+                        cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
 
                 cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser roi parcels into roi mask
                 cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reorient2fsl' # fix orientation of HCP-MMP1 masks to FSL standard orientation
-                cmd[2] = f'flirt -in {mask_out}_reorient2fsl -ref {ref_img} -out {mask_out}_funcspace.nii.gz -applyxfm -init {datadir}/{sub}/func/xfms/rest/AvgSBref2acpc_EpiReg_init.mat'# -init {identity_mat}' # transform masks in subj anat space to func space
+                # cmd[2] = f"applywarp --ref=/home/holland/Desktop/EVO_TEST/subjects/97048/func/rest/qa/CoregQA/SBref2acpc_EpiReg+BBR_AvgFM_S2_R1.nii.gz --in={mask_out}_reorient2fsl --out={mask_out}_funcspace --mask=/home/holland/Desktop/EVO_TEST/subjects/97048/func/xfms/rest/T1w_acpc_brain_func_mask.nii.gz --interp='nn' --verbose --postmat={datadir}/{sub}/anat/T1w/AverageT1wImages/T1w1_gdc_std2roi.mat"
+                # cmd[2] = f"applywarp --ref={datadir}/{sub}/ --in={mask_out}_reorient2fsl --out={mask_out}_funcspace --mask=/home/holland/Desktop/EVO_TEST/subjects/97048/func/xfms/rest/T1w_acpc_brain_func_mask.nii.gz --interp='nn'" #--postmat={datadir}/{sub}/anat/T1w/AverageT1wImages/T1w1_gdc_std2roi.mat'
+
+                # cmd[2] = f"flirt -in {mask_out}_reorient2fsl -ref /home/holland/Desktop/EVO_TEST/subjects/97048/func/rest/qa/CoregQA/SBref2acpc_EpiReg+BBR_AvgFM_S2_R1.nii.gz -out {mask_out}_funcspace -applyxfm"# -init /home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat' # transform mask dims to match func data
+                cmd[2] = f'flirt -in {mask_out}_reorient2fsl -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc -applyxfm -init {flirt_reference}.mat'
                 # cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
-                cmd[3] = f'fslmaths {mask_out}_funcspace.nii.gz -bin -thr 0.9 {mask_bin_out}' # binarize
-                cmd[4] = f'fslmeants -i {func_in}.nii.gz -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                cmd[3] = f'fslmaths {mask_out}_denoiseaggrfunc -bin {mask_bin_out}' # binarize
+                cmd[4] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_bin_out}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
 
 
