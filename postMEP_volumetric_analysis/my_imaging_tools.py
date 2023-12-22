@@ -1,13 +1,17 @@
 import os
 import subprocess
 import glob
-import json
-import tqdm
+# import json
+# import tqdm
 from typing import List, Union
 
 class fmri_tools:
 
     """
+    2023-12-22 : add 2 variations on exec_cmds for use on the cluster
+        - add exec_cmds_prtsubject to output subject ID to bash shell for running things on the cluster
+        - add exec_echo to print things in the shell; useful for cluster, where Python print function throws an error
+
     2023-09-25 : add read_json function
         - store TR, TE, dwell time, etc. in string list
 
@@ -26,10 +30,21 @@ class fmri_tools:
         else:
             self.get_sublist(studydir)
 
-    # Run commands in system terminal
+    # Run commands in system bash shell
     def exec_cmds(self, commands):
         for command in commands:
             subprocess.run(command, shell=True, executable='/bin/bash') # run command in bash shell
+
+    # Run commands in system bash shell; print subject ID for which commands are executed to shell
+    def exec_cmds_prtsubject(self, commands, subject):
+        for command in commands:
+            subprocess.run(command, shell=True, executable='/bin/bash') # run command in bash shell
+            subprocess.run(f"echo -e {subject}\n", shell=True, executable='/bin/bash')
+
+    # Print strings to system bash shell (useful for cluster, where Python print function doens't work)
+    def exec_echo(self, input_string):
+        command = f'echo -e "{input_string}"\n'
+        subprocess.run(command, shell=True, executable='/bin/bash')
     
     # Get subject list from subject folder names
     def get_sublist(self, studydir: str):
