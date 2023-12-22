@@ -60,9 +60,9 @@ for sub in q.subs:
 
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
-rois = ['L_MFG']
+# rois = ['L_MFG']
 
-cmd = [None]*5
+cmd = [None]*6
 for roi in rois:
 
     # ROI parcel names from HCP MMP1.0 atlas labels
@@ -88,13 +88,13 @@ for roi in rois:
 
                 # files for mask creation & Flirt alignment
                 # flirt_reference = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}'
-                flirt_reference = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # ref img for ROI mask Flirt realign: funcspace subject Glasser atlas
-                # flirt_reference = f'{datadir}/{sub}/func/xfms/T1w_acpc_brain_func'
+                # flirt_reference = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}' # ref img for ROI mask Flirt realign: funcspace subject Glasser atlas
+                flirt_reference = f'{datadir}/{sub}/func/xfms/T1w_acpc_brain_func'
                 mask_out = f'{roidir}/{roi}_S{session}_R{run}' # mask comprised of Glasser ROI parcels; prefix for other ROI mask output files
 
                 # files for time-series extraction
                 func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/{func_fn}'
-                roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries.txt'
+                roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries'
 
                 # Create subject volumetric ROI dir if needed
                 if os.path.isdir(roidir)==False:
@@ -111,33 +111,17 @@ for roi in rois:
                 cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
                 cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
                 cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                # cmd[2] = f'fslmaths {mask_out}_funcspace.nii.gz -add 10000 {mask_out}_funcspace_remean.nii.gz' # recenter ROI mask at 10000
-                cmd[3] = f'fslmaths {mask_out}_denoiseaggrfunc -bin {mask_out}_denoiseaggrfunc_bin' # binarize
-                cmd[4] = f'fslmeants -i {func_in} -o {roi_ts} -m {mask_out}_denoiseaggrfunc_bin' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
+                cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.3 -bin {mask_out}_denoiseaggrfunc_bin_thr0.3.nii.gz' # binarize
+                cmd[5] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.3.txt -m {mask_out}_denoiseaggrfunc_bin_thr0.3.ni.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
                 q.exec_cmds(cmd)
   
-# %% Extract timeseries from ROIs for input into Level 1 analysis (ref: ROI_timeseries.sh)
-# fslmeants -> output avg time series of set of voxels, or indiv time series for each of specified voxels
-cmd=[None]
-for sub in q.subs:
-    for session in sessions:
-        for run in runs:
-            for roi in rois:
-                roidir = 
-                mask = f'{roidir}/{roi}_S{session}_R{run}' # subjects binarized ROI mask
-                func_nifti = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_E1_acpc.nii.gz' # subject rest func nifti
-                roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt' # output text file containing ROI time series
-
-                if os.path.exists(f'{roi_ts}') == False:
-                    # print(f'Extracting ROI time series for {sub}...\n')
-                    cmd[0] = f'fslmeants -i {func_nifti} -o {roi_ts} -m {mask}' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
-                    q.exec_cmds(cmd) # execute bash commands in system terminal
-                # else:
-                #     print(f'ROI time series file already exists for subject {sub}...\n')
-
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
-feat_fn = f''
-feat_df = f''
+feat_fn = f'20231221_evo_lowerlev_test2.fsf'
+feat_df = f'/home/holland/Desktop/{feat_fn}'
+timestep = 1.4
+rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+
 
 cmd=[None]
 commands = [None]*8
@@ -147,34 +131,36 @@ for sub in q.subs:
                 # func_nifti = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_E1_acpc.nii.gz'
 
                 # Get TR (i.e. timestep) from JSON
-                json = f'{datadir}/{sub}/func/unprocessed/session_{session}/run_{run}/Rest_S{session}_R1_E1.json'
-                with open(f'{datadir}/{sub}/func/unprocessed/rest/session_{session}/run_{run}/Rest_S{session}_R1_E1.json', 'rt') as func_json:
-                    func_info = json.load(func_json)
-                timestep = func_info['RepetitionTime']
+                # json = f'{datadir}/{sub}/func/unprocessed/session_{session}/run_{run}/Rest_S{session}_R1_E1.json'
+                # with open(f'{datadir}/{sub}/func/unprocessed/rest/session_{session}/run_{run}/Rest_S{session}_R1_E1.json', 'rt') as func_json:
+                #     func_info = json.load(func_json)
+                # timestep = func_info['RepetitionTime']
                 # print(timestep)
                 
                 for roi in rois:
-                    session_dir = f'{datadir}/{sub}/func/rest/rois/{roi}/session_{session}'
-                    outdir = f'{session_dir}/run_{run}'
+                    session_dir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric'
+                    outdir = f'{session_dir}'
 
-                    if os.path.isdir(session_dir)==False:
-                        cmd[0] = f'mkdir {session_dir}'
-                        q.exec_cmds(cmd)
+                    # if os.path.isdir(session_dir)==False:
+                    #     cmd[0] = f'mkdir {session_dir}'
+                    #     q.exec_cmds(cmd)
 
-                    if os.path.isdir(outdir)==False:
-                        cmd[0] = f'mkdir {outdir}'
-                        q.exec_cmds(cmd)
+                    # if os.path.isdir(outdir)==False:
+                    #     cmd[0] = f'mkdir {outdir}'
+                    #     q.exec_cmds(cmd)
 
                     # roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt'
-                    roi_tn = f'{roi}_S{session}_R{run}_timepoints.txt'
+                    # roi_tn = f'{roi}_S{session}_R{run}_timepoints.txt'
+                    roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric/{roi}_S{session}_R{run}_timeseries.txt'
+
 
                     # Create design.fsf template for this ROI
                     if os.path.isfile(f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_design.fsf')==False:
                         commands[0] = f'cp {feat_df} {outdir}' # copy design file into preproc dir
-                        commands[1] = f"sed -i 's/ROI/{roi}/g' {outdir}/{feat_fn}"
+                        commands[1] = f"sed -i 's/REGIONOFINTEREST/{roi}/g' {outdir}/{feat_fn}"
                         commands[2] = f"sed -i 's/TIMESTEP/{timestep}/g' {outdir}/{feat_fn}"
                         commands[3] = f"sed -i 's/INPUTNIFTI/{func_fn}/g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
-                        commands[4] = f"sed -i 's/REGIONOFINTERESTTXT/{roi_tn}/g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
+                        commands[4] = f"sed -i 's/REGIONOFINTERESTTXT/{roi_ts}/g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
                         commands[5] = f"sed -i 's/SUBJ/{sub}/g' {outdir}/{feat_fn}"
                         commands[6] = f"sed -i 's/SESSION/{session}/g' {outdir}/{feat_fn}"
                         commands[7] = f"sed -i 's/MRIRUN/{run}/g' {outdir}/{feat_fn}"
