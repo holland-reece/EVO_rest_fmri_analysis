@@ -36,9 +36,13 @@ identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-ec
 q = fmri_tools(datadir)
 sessions = ['2']
 runs = ['1']
-rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+rois=['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC','L_Amygdala','R_Amygdala']
 # func_fn = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
 func_fn = 'denoised_func_data_aggr'
+
+# paths to Harvord-Oxford subcortical probabalistic amygdala masks in MNI space (no extension)
+L_amygdala_mni_mask = f'home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_L Amygdala'
+R_amygdala_mni_mask = f'home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_R Amygdala'
 
 # %% First, align HCP-MMP1 in subject's FreeSurfer space to subject's anatomical -> get right pixel dims
 cmd=[None]*2
@@ -63,6 +67,7 @@ for sub in q.subs:
 # rois = ['L_MFG']
 
 cmd = [None]*6
+command = [None]
 for roi in rois:
 
     # ROI parcel names from HCP MMP1.0 atlas labels
@@ -78,6 +83,10 @@ for roi in rois:
         roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
     elif roi == 'L_rACC':
         roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
+    # elif roi == 'L_Amygdala':
+    #     roi_parcels = [L_amygdala_mni_mask]
+    # elif roi == 'R_Amygdala':
+    #     roi_parcels = [R_amygdala_mni_mask]
 
     for sub in q.subs:
         for session in sessions:
@@ -100,21 +109,32 @@ for roi in rois:
                 if os.path.isdir(roidir)==False:
                     q.create_dirs(roidir)
 
-                # Structure fslmaths command string with all roi parcels
-                cmd_str = f'fslmaths'
-                for p in roi_parcels:
-                    if p == roi_parcels[0]:
-                        cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/masks/{p}'
+                cmd_str = f'fslmaths' # init cmd string to concatenate roi parcels
+                if roi == 'L_Amygdala' or roi == 'R_Amygdala':
+                    if roi == 'L_Amygdala':
+                        mni_roi_mask = L_amygdala_mni_mask
                     else:
-                        cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
+                        mni_roi_mask = R_amygdala_mni_mask
+                    command[0] = f'flirt -2D -in {mni_roi_mask}.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
+                    command[1] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
+                    command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.3 -bin {mask_out}_denoiseaggrfunc_bin_thr0.3.nii.gz' # binarize
 
-                cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
-                cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
-                cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
-                cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.3 -bin {mask_out}_denoiseaggrfunc_bin_thr0.3.nii.gz' # binarize
-                cmd[5] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.3.txt -m {mask_out}_denoiseaggrfunc_bin_thr0.3.ni.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
-                q.exec_cmds(cmd)
+                    q.exec_cmds(command)
+                else:
+                    # Structure fslmaths command string with all roi parcels
+                    for p in roi_parcels:
+                        if p == roi_parcels[0]:
+                            cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/masks/{p}'
+                        else:
+                            cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
+
+                    cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
+                    cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
+                    cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
+                    cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
+                    cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.3 -bin {mask_out}_denoiseaggrfunc_bin_thr0.3.nii.gz' # binarize
+                    cmd[5] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.3.txt -m {mask_out}_denoiseaggrfunc_bin_thr0.3.ni.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                    q.exec_cmds(cmd)
   
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f'20231221_evo_lowerlev_test2.fsf'
