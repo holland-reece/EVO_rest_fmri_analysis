@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-12-27
+# Updated 2023-12-28
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -25,12 +25,12 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
-datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+# home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
+# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
 # identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
 
-# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
+datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
 # identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
 q = fmri_tools(datadir)
@@ -146,15 +146,20 @@ for roi in rois:
 q.exec_echo('\nDone.\n')
 
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
-feat_fn = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_fsf/20231227_test_MNI_reg.fsf'
-feat_df = f'/home/holland/Desktop/{feat_fn}'
+feat_fn = f'evo_vol_lowerlev'
+feat_df = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_fsf/{feat_fn}'
+func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA.nii.gz/{func_fn}'
 timestep = 1.4
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG']
+# subs = ['97048']
+sessions = ['2']
+runs = ['1']
+# datadir_str = f'/home/holland/Desktop/EVO_TEST/subjects'
 
 
 cmd=[None]
-commands = [None]*8
+commands = [None]*10
 for sub in q.subs:
     for session in sessions:
             for run in runs:
@@ -168,8 +173,8 @@ for sub in q.subs:
                 # print(timestep)
                 
                 for roi in rois:
-                    session_dir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric'
-                    outdir = f'{session_dir}'
+                    # session_dir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric'
+                    outdir = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric'
 
                     # if os.path.isdir(session_dir)==False:
                     #     cmd[0] = f'mkdir {session_dir}'
@@ -181,12 +186,13 @@ for sub in q.subs:
 
                     # roi_ts = f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_timepoints.txt'
                     # roi_tn = f'{roi}_S{session}_R{run}_timepoints.txt'
-                    datadir_str = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data'
+                    # datadir_str = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data'
                     roi_ts_str = f'{datadir}/{sub}/func/rest/rois/{roi}/{sub}_native_space_volumetric/{roi}_S{session}_R{run}_timeseries.txt'
 
 
                     # Create design.fsf template for this ROI
-                    if os.path.isfile(f'{datadir}/{sub}/func/rest/rois/{roi}/{roi}_S{session}_R{run}_design.fsf')==False:
+                    # feat_fn = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_fsf/20231227_test_MNI_reg.fsf'
+                    # if os.path.isfile(f'{feat_df}')==False:
                         # commands[0] = f'cp {feat_df} {outdir}' # copy design file into preproc dir
                         # commands[1] = f"sed -i 's/REGIONOFINTEREST/{roi}/g' {outdir}/{feat_fn}"
                         # commands[2] = f"sed -i 's/TIMESTEP/{timestep}/g' {outdir}/{feat_fn}"
@@ -196,22 +202,25 @@ for sub in q.subs:
                         # commands[6] = f"sed -i 's/SESSION/{session}/g' {outdir}/{feat_fn}"
                         # commands[7] = f"sed -i 's/MRIRUN/{run}/g' {outdir}/{feat_fn}"
 
-                        # TEST: use ';' with sed instead of '/'
-                        commands[0] = f'cp {feat_df} {outdir}' # copy design file into preproc dir
-                        commands[1] = f"sed -i 's;REGIONOFINTEREST;{roi};g' {outdir}/{feat_fn}"
-                        commands[2] = f"sed -i 's;TIMESTEP;{timestep};g' {outdir}/{feat_fn}"
-                        commands[3] = f"sed -i 's;INPUTNIFTI;{func_fn};g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
-                        commands[4] = f"sed -i 's;REGIONOFINTERESTTXT;{roi_ts};g' {outdir}/{feat_fn}" # (still have to put correct path into design file before running)
-                        commands[5] = f"sed -i 's;SUBJ;{sub};g' {outdir}/{feat_fn}"
-                        commands[6] = f"sed -i 's;MRISESSION;{session};g' {outdir}/{feat_fn}"
-                        commands[7] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}"
-                        q.exec_cmds(commands)
+                    # TEST: use ';' with sed instead of '/'
+                    commands[0] = f'cp {feat_df}_template.fsf {outdir}' # copy design file into preproc dir
+                    commands[1] = f'mv {outdir}/{feat_fn}_template.fsf {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf'
+                    # commands[0] = f"touch '/home/holland/Desktop/test.txt'"
+                    commands[2] = f"sed -i 's;TIMESTEP;{timestep};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[3] = f"sed -i 's;INPUTNIFTI;{func_in};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[4] = f"sed -i 's;REGIONOFINTERESTTXT;{roi_ts_str};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[5] = f"sed -i 's;REGIONOFINTEREST;{roi};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[6] = f"sed -i 's;SUBJ;{sub};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[7] = f"sed -i 's;MRISESSION;{session};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[8] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[9] = f"sed -i 's;DATADIRSTR;{datadir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    q.exec_cmds(commands)
 
-                    cmd[0] = f'feat {outdir}/{feat_fn}' # run fsf file
+                    cmd[0] = f'feat {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf' # run fsf file
                     q.exec_cmds(cmd)
 
-                    print(f'\n-------- Running Feat analysis for {sub} --------\n')
-print('\n-------- Feat analyses done. --------\n\n')
+                    # print(f'\n-------- Running Feat analysis for {sub} --------\n')
+# print('\n-------- Feat analyses done. --------\n\n')
 
 
 
