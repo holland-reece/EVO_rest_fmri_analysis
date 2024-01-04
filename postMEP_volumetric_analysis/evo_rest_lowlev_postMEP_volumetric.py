@@ -25,12 +25,12 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-# home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
-# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
+datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
 # identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
 
-home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
+# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
 # identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
 q = fmri_tools(datadir)
@@ -43,8 +43,8 @@ rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 func_fn = 'denoised_func_data_aggr'
 
 # paths to Harvord-Oxford subcortical probabalistic amygdala masks in MNI space (no extension)
-L_amygdala_mni_mask = f'home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_L Amygdala'
-R_amygdala_mni_mask = f'home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_R Amygdala'
+L_amygdala_mni_mask = f'/home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_L Amygdala'
+R_amygdala_mni_mask = f'/home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_R Amygdala'
 
 # %% First, align HCP-MMP1 in subject's FreeSurfer space to subject's anatomical -> get right pixel dims
 cmd=[None]*2
