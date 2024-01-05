@@ -3,8 +3,8 @@
 # 2023-01-05
 # Remove symbolic links and copy files they link to into surf dir before running create_subj_volume_parcellation.sh
 
-SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
-SubjectsList="$SUBJECTS_DIR/NKIsublist.txt"
+SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data"
+SubjectsList="$SUBJECTS_DIR/UWsublist.txt"
 
 for i in $(cat "$SubjectsList"); do
 
@@ -94,12 +94,12 @@ for i in $(cat "$SubjectsList"); do
     fi
 
     # Make temporary copies of FreeSurfer subdirs in main subject dir
-    if [ ! -d "$SUBJECTS_DIR/$SUBJ" ]; then
+    if [ ! -d "$SUBJECTS_DIR/$SUBJ/$SUBJ" ]; then
         cp -rf "$SubFreeSurferDir" "$SUBJECTS_DIR/$SUBJ"
     fi
 
     # Move files into main subject dir and delete extra dir
-    if [ -d "$SUBJECTS_DIR/$SUBJ/$SUBJ" ]; then
+    if [ -d "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ" ]; then
         mv "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ"/* "$SUBJECTS_DIR/$SUBJ" 
         rm -r "$SUBJECTS_DIR/$SUBJ/$SUBJ"
     fi
