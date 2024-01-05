@@ -9,7 +9,7 @@ SubjectsList="$SUBJECTS_DIR/NKIsublist.txt"
 for i in $(cat "$SubjectsList"); do
 
     SUBJ=$(echo $i)
-    echo "\n    ---------------------    $SUBJ    ---------------------    \n"
+    echo "    ---------------------    $SUBJ    ---------------------    "
 
     SubFreeSurferDir="$SUBJECTS_DIR/$SUBJ/anat/T1w/$SUBJ"
     SubSurfDir="$SubFreeSurferDir/surf"
@@ -18,7 +18,7 @@ for i in $(cat "$SubjectsList"); do
     if [ ! -d "$SubFreeSurferDir/symlinks" ]; then
         mkdir "$SubFreeSurferDir/symlinks"
     else
-        echo -e "\n$SubFreeSurferDir/symlinks already exists...\n"
+        echo -e "$SubFreeSurferDir/symlinks already exists..."
     fi
 
     # Replace Left Pial symbolic link with file it points to
@@ -106,4 +106,4 @@ for i in $(cat "$SubjectsList"); do
 
 done
 
-echo "\n    ---------------------    Done    ---------------------    \n"
+echo "    ---------------------    Done    ---------------------    "
