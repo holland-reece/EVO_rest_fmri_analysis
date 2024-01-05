@@ -41,9 +41,10 @@
 
 # export FREESURFER_HOME=/usr/local/freesurfer
 # source $FREESURFER_HOME/SetUpFreeSurfer.sh # HRB: make sure FreeSurfer path is in env
+
+# NOTE: If running multiple subjects, only need to run these three lines in the shell once before executing this script; comment these out
 export FREESURFER_HOME="/home/software/apps/freesurfer6/6.0/freesurfer" # cluster path to FreeSurfer
 source "${FREESURFER_HOME}/SetUpFreeSurfer.sh"
-
 module load fsl # need this to generate masks on cluster
 
 # SUBJECTS_DIR="/home/holland/Desktop/EVO_TEST/subjects" # HRB: set preprocessed data dir manually

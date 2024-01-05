@@ -25,15 +25,18 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
-# home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
-# datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
-# identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
 
-home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+# Important dirs
+home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
+datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
+# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
+# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+
+# Probably won't need these identity matrices...
+# identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
 # identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
-q = fmri_tools(datadir)
+q = fmri_tools(datadir) # init functions and subject list
 sessions = ['1','2']
 runs = ['1']
 # rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC','L_Amygdala','R_Amygdala']
