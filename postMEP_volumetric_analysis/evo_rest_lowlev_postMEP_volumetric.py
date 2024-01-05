@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-01-02
+# Updated 2023-01-05
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -25,15 +25,18 @@ import glob
 from my_imaging_tools import fmri_tools
 
 site = 'NKI'
+
+# Important dirs
 home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
 datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
-# identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
-
 # home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
 # datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
+
+# Probably won't need these identity matrices...
+# identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
 # identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
 
-q = fmri_tools(datadir)
+q = fmri_tools(datadir) # init functions and subject list
 sessions = ['1','2']
 runs = ['1']
 # rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC','L_Amygdala','R_Amygdala']
@@ -147,7 +150,7 @@ q.exec_echo('\nDone.\n')
 
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f'evo_vol_lowerlev'
-feat_df = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_fsf/{feat_fn}'
+feat_df = f'{home_dir}/{feat_fn}'
 func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA.nii.gz/{func_fn}'
 timestep = 1.4
 # rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
