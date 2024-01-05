@@ -42,22 +42,23 @@ for i in $(cat "$SubjectsList"); do
 
     # If surface analysis files exist in ROI dirs, move them to new ROI surf dir
     ROIdir="$DataDir"/"$SUBJ"/func/rest/rois
-    echo -e "$ROIdir" # TEST
+    # echo -e "$ROIdir" # TEST
 
     # for all ROI dirs...
-    for j in "$ROIdir/*"; do
-        if [ -d "$j" ]; then # dirs only, not files
-            echo -e "$j" # TEST
+    for j in "$ROIdir"/*; do
+        # echo -e "$j TEST 1" # TEST
+        if [ -d $j ]; then # dirs only, not files
+            # echo -e "$j TEST 2" # TEST
             if [ ! -d "$j/rest_lowerlev_surf" ]; then
                 mkdir "$j/rest_lowerlev_surf"
             fi
 
             # move surface files from ROI dir to ROI surface lower level dir analysis
-            for k in "$j/*"; do
+            for k in "$j"/*; do
                 if [ -f "$k" ]; then
-                    echo -e "$k TEST 1" # TEST
+                    # echo -e "$k TEST 1" # TEST
                     if [[ "$k" == "$j"/"$SUBJ"*"_denoised_aggr"* ]]; then
-                        echo -e "$k TEST 2" # TEST
+                        # echo -e "$k TEST 2" # TEST
                         mv "$k" "$j/rest_lowerlev_surf"
                     fi
                 fi
