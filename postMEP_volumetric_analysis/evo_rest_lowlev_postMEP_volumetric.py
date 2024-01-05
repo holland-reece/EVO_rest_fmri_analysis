@@ -39,8 +39,10 @@ datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # whe
 q = fmri_tools(datadir) # init functions and subject list
 sessions = ['1','2']
 runs = ['1']
-# rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC','L_Amygdala','R_Amygdala']
+# rois = ['L_Amygdala','R_Amygdala']
 rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+timestep = 1.4
+
 
 # func_fn = 'denoised_func_data_aggr' # without extension; ac/pc aligned, denoised with ICA-AROMA
 func_fn = 'denoised_func_data_aggr'
@@ -114,51 +116,43 @@ for roi in rois:
                         q.create_dirs(roidir)
 
                     # For Harvard-Oxford amygdala ROI masks in MNI space...
-                    if roi == 'L_Amygdala' or roi == 'R_Amygdala':
-                        if roi == 'L_Amygdala':
-                            mni_roi_mask = L_amygdala_mni_mask
-                        else:
-                            mni_roi_mask = R_amygdala_mni_mask
+                    # if roi == 'L_Amygdala' or roi == 'R_Amygdala':
+                    #     if roi == 'L_Amygdala':
+                    #         mni_roi_mask = L_amygdala_mni_mask
+                    #     else:
+                    #         mni_roi_mask = R_amygdala_mni_mask
 
-                        command[0] = f'flirt -2D -in {mni_roi_mask}.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                        command[1] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
-                        command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
-                        command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.8 -bin {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize
-                        command[3] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
-                        command[4] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
-                        q.exec_cmds(command)
+                    #     command[0] = f'flirt -2D -in {mni_roi_mask}.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
+                    #     command[1] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
+                    #     command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
+                    #     command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.8 -bin {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize
+                    #     command[3] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
+                    #     command[4] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
+                    #     q.exec_cmds(command)
                     
                     # For Glasser 2016 HCP-MMP1 ROIs in subject anatomical space...
-                    else:
-                        # Structure fslmaths command string with all roi parcels
-                        for p in roi_parcels:
-                            if p == roi_parcels[0]:
-                                cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/masks/{p}'
-                            else:
-                                cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
+                    # else:
+                    # Structure fslmaths command string with all roi parcels
+                    for p in roi_parcels:
+                        if p == roi_parcels[0]:
+                            cmd_str = f'{cmd_str} {sub_parc_niftis_dir}/masks/{p}'
+                        else:
+                            cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
 
-                        cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
-                        cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
-                        cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                        cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
-                        cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
-                        cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
-                        cmd[6] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
-                        cmd[7] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
-                        q.exec_cmds(cmd)
+                    cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
+                    cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
+                    cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
+                    cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
+                    cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
+                    cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
+                    cmd[6] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
+                    cmd[7] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
+                    q.exec_cmds(cmd)
 q.exec_echo('\nDone.\n')
 
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f'evo_vol_lowerlev'
-feat_df = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_fsf/{feat_fn}'
-timestep = 1.4
-# rois=['R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
-rois = ['L_MFG']
-# subs = ['97048']
-sessions = ['2']
-runs = ['1']
-# datadir_str = f'/home/holland/Desktop/EVO_TEST/subjects'
-
+feat_df = f'{home_dir}/{feat_fn}'
 
 cmd=[None]
 commands = [None]*10
