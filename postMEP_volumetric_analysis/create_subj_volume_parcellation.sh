@@ -89,6 +89,9 @@ output_dir=$d
 get_anatomical_stats=YES
 create_aseg_files=NO
 
+# HRB added: print at top of slurm output file so I can tell which subject it's for
+echo -e "$L"
+
 if [ ! -z "${f}" ] ; then first=$f; else first=1; fi
 if [ ! -z "${l}" ] ; then last=$l; else last=`wc -l < ${subject_list_all}`; fi
 if [ ! -z "${m}" ] ; then create_individual_masks=$m; fi
