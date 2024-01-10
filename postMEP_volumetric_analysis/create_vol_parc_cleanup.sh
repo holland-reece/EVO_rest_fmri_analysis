@@ -10,7 +10,7 @@ SubjectsList="/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data/UWsublis
 for i in $(cat "$SubjectsList"); do
 
     SUBJ=$(echo $i)
-    echo -e "Cleaning $SUBJ files..."
+    echo "    ---------------------    $SUBJ    ---------------------    "
 
     # Remove temporary text files created for vol parc
     if [ -f "$DataDir/$SUBJ.txt" ]; then
@@ -72,4 +72,4 @@ for i in $(cat "$SubjectsList"); do
 
 done
 
-echo -e "Done."
+echo "    ---------------------    Done    ---------------------    "
