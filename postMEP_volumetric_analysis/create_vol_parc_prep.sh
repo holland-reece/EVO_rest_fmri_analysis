@@ -1,18 +1,18 @@
 #!/bin/bash
 # Holland Brown
-# 2023-01-05
+# 2023-01-10
 # Remove symbolic links and copy files they link to into surf dir before running create_subj_volume_parcellation.sh
 
-SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data"
-SubjectsList="$SUBJECTS_DIR/UWsublist.txt"
+SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
+SubjectsList="$SUBJECTS_DIR/TEST.txt"
 
 for i in $(cat "$SubjectsList"); do
 
     SUBJ=$(echo $i)
     echo "    ---------------------    $SUBJ    ---------------------    "
 
-    SubFreeSurferDir="$SUBJECTS_DIR/$SUBJ/anat/T1w/$SUBJ"
-    SubSurfDir="$SubFreeSurferDir/surf"
+    SubFreeSurferDir="$SUBJECTS_DIR"/"$SUBJ"/anat/T1w/"$SUBJ"
+    SubSurfDir="$SubFreeSurferDir"/surf
 
     # Make dir for symlinks if necessary
     if [ ! -d "$SubFreeSurferDir/symlinks" ]; then
@@ -94,14 +94,14 @@ for i in $(cat "$SubjectsList"); do
     fi
 
     # Make temporary copies of FreeSurfer subdirs in main subject dir
-    if [ ! -d "$SUBJECTS_DIR/$SUBJ/$SUBJ" ]; then
-        cp -rf "$SubFreeSurferDir" "$SUBJECTS_DIR/$SUBJ"
+    if [ ! -d "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ" ]; then
+        cp -rf "$SubFreeSurferDir" "$SUBJECTS_DIR"/"$SUBJ"
     fi
 
     # Move files into main subject dir and delete extra dir
     if [ -d "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ" ]; then
-        mv "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ"/* "$SUBJECTS_DIR/$SUBJ" 
-        rm -r "$SUBJECTS_DIR/$SUBJ/$SUBJ"
+        mv "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ"/* "$SUBJECTS_DIR"/"$SUBJ" 
+        rm -r "$SUBJECTS_DIR"/"$SUBJ"/"$SUBJ"
     fi
 
 done
