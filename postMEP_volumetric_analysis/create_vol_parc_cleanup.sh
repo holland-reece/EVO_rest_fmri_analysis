@@ -1,11 +1,11 @@
 #!/bin/bash
 # Holland Brown
-# 2023-01-08
+# 2023-01-10
 # Fix mask dir tree and copy ROI masks to main subject dirs
 
-DataDir="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
+DataDir="/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data"
 MasksDir="/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric/HCP-MMP1_fsaverage_masks"
-SubjectsList="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data/NKIsublist.txt"
+SubjectsList="/athena/victorialab/scratch/hob4003/study_EVO/UW_MRI_data/UWsublist.txt"
 
 for i in $(cat "$SubjectsList"); do
 
@@ -17,17 +17,20 @@ for i in $(cat "$SubjectsList"); do
         rm "$DataDir/$SUBJ.txt"
     fi
 
-    # Rename mask folders in masks dir to just be the subject ID
-    if [ -d "$MasksDir/$SUBJ_HCP-MMP1_vol_roi_masks" ]; then
-        mv "$MasksDir/$SUBJ_HCP-MMP1_vol_roi_masks" "$MasksDir/$SUBJ"
+    # Rename mask folders
+    if [ -d "$MasksDir"/"$SUBJ" ]; then
+        mv "$MasksDir"/"$SUBJ" "$MasksDir"/"$SUBJ"_HCP-MMP1_vol_roi_masks
+    else
+        echo -e "\nNo masks dir for $SUBJ found...\n"
     fi
 
-    # Make copy of ROI masks in subject's anat dir, rename subj anat masks dir, remove symbolic links from anat dir
+    # Make copy of ROI masks in subject's anat dir, remove symbolic links from anat dir
     SubjectAnatDir="$DataDir"/"$SUBJ"/anat
-    if [ ! -d "$MasksDir"/"$SUBJ" ]; then
-        cp -rf "$MasksDir"/"$SUBJ" "$DataDir"/"$SUBJ"/anat
-        mv "$DataDir"/"$SUBJ"/anat/"$SUBJ" "$DataDir"/"$SUBJ"/anat/"$SUBJ"_HCP-MMP1_vol_roi_masks
-        rm -r "$DataDir"/"$SUBJ"/anat/T1w/$SUBJ/symlinks > /dev/null 2>&1
+    if [ ! -d "$DataDir"/"$SUBJ"/anat/"$SUBJ"_HCP-MMP1_vol_roi_masks ]; then
+        cp -rf "$MasksDir"/"$SUBJ"_HCP-MMP1_vol_roi_masks "$DataDir"/"$SUBJ"/anat
+        rm -r "$DataDir"/"$SUBJ"/anat/T1w/"$SUBJ"/symlinks > /dev/null 2>&1
+    else
+        echo -e "\nMask dir in $SUBJ anatomical dir already exists...\n"
     fi
 
     # remove temp dirs from main subject dir
