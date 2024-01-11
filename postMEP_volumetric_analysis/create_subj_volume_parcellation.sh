@@ -1,5 +1,7 @@
 #!/bin/bash
 
+# Holland Brown's comments --------------------------------------------
+
 # script adapted from https://figshare.com/articles/dataset/HCP-MMP1_0_volumetric_NIfTI_masks_in_native_structural_space/4249400?file=13320527
 
 # Creates subject-level parcellation image from annotation files in fsaverage space. Can be used with the HCP-MMP1.0 projected on fsaverage annotation files available from https://figshare.com/articles/HCP-MMP1_0_projected_on_fsaverage/3498446
@@ -9,7 +11,11 @@
 # EVO Example Command (run from this script, saved in /home/holland/Desktop/EVO_TEST/subjects/):
 # ./create_subj_volume_parcellation.sh -L '/home/holland/Desktop/EVO_TEST/subjects/subjectslist.txt' -a 'HCP-MMP1' -d '/home/holland/Desktop/EVO_TEST/HCP-MMP1_fsaverage_masks' -m YES
 # ./create_subj_volume_parcellation.sh -L '/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data/EVOsubjects_test.txt' -a 'HCP-MMP1' -d '/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric/HCP-MMP1_fsaverage_masks' -m YES
-# 
+
+
+
+# Comments from script original source ---------------------------
+#
 # HOW TO USE
 # 
 # Ingredients:
@@ -39,10 +45,11 @@
 # Inside the original subjects’ label folders, post-transformation annotation files will be created. These are not overwritten if the script is relaunched; so, if you ran into a problem and want to start over, you should delete these files (named lh(rh).<subject>_<name_of_annotation_file>.annot)
 
 
+# HRB: make sure FreeSurfer path is in env -----------
 # export FREESURFER_HOME=/usr/local/freesurfer
 # source $FREESURFER_HOME/SetUpFreeSurfer.sh # HRB: make sure FreeSurfer path is in env
 
-# NOTE: If running multiple subjects, only need to run these three lines in the shell once before executing this script; comment these out
+# NOTE: If running multiple subjects, only need to run these three lines in the shell once before executing this script, then comment these out
 export FREESURFER_HOME="/home/software/apps/freesurfer6/6.0/freesurfer" # cluster path to FreeSurfer
 source "${FREESURFER_HOME}/SetUpFreeSurfer.sh"
 module load fsl # need this to generate masks on cluster
