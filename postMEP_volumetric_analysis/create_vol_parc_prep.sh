@@ -1,10 +1,10 @@
 #!/bin/bash
 # Holland Brown
-# 2023-01-10
+# Updated 2023-01-10
 # Remove symbolic links and copy files they link to into surf dir before running create_subj_volume_parcellation.sh
 
-SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data"
-SubjectsList="$SUBJECTS_DIR/TEST.txt"
+SUBJECTS_DIR="/athena/victorialab/scratch/hob4003/study_EVO/NKI_MRI_data" # main data dir, where subject dirs are located
+SubjectsList="$SUBJECTS_DIR/NKI_subjectlist.txt"
 
 for i in $(cat "$SubjectsList"); do
 
