@@ -2,13 +2,14 @@
 
 # Holland Brown
 
-# Updated 2023-01-05
+# Updated 2023-01-12
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
 
 # Notes:
     # Run bash-$ source $FREESURFER_HOME/SetUpFreeSurfer.sh in shell before running (needed for FreeSurfer bbregister call)
+    # Have copy of FSL struct in script folder, for example MNI152_T1_2mm_brain.nii.gz
 
 # Sources:
     # HCP-MMP1.0 projected onto fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_projected_on_fsaverage/3498446
@@ -63,13 +64,14 @@ for sub in q.subs:
             flirt_reference = f'{datadir}/{sub}/func/xfms/rest/T1w_acpc_brain_func'
 
             if (os.path.isfile(glasser_atlas_out)==False) and (os.path.isdir(sub_parc_niftis_dir)==True):
+                q.exec_echo(f'{sub}: Reorienting subject atlas and aligning to subject functional space...')
                 cmd[0] = f'fslreorient2std {glasser_atlas_in} {glasser_atlas_in}_reoriented' # reorient FS HCP-MMP1 to FSL standard orientation
                 cmd[1] = f"flirt -interp nearestneighbour -in {glasser_atlas_in}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {glasser_atlas_out}.nii.gz -omat {glasser_atlas_out}.mat" # flirt alignment to func space -> get transform matrix
                 q.exec_cmds_prtsubject(cmd,f'{sub}_S{session}_R{run}')
 
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
 cmd = [None]*8
-command = [None]
+# command = [None]
 
 for roi in rois:
     q.exec_echo(f'\n------------------------- {roi} -------------------------\n')
@@ -87,15 +89,12 @@ for roi in rois:
         roi_parcels = ['R_p24_ROI','R_a24_ROI'] # R_rACC
     elif roi == 'L_rACC':
         roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
-    # elif roi == 'L_Amygdala':
-    #     roi_parcels = [L_amygdala_mni_mask]
-    # elif roi == 'R_Amygdala':
-    #     roi_parcels = [R_amygdala_mni_mask]
 
     for sub in q.subs:
         sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # path to Glasser atlas in subject func space
         for session in sessions:
             for run in runs:
+                q.exec_echo(f'{sub}_S{session}_R{run} : {roi}')
                 glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc_S{session}_R{run}.nii.gz'
                 if os.path.isfile(f'{glasser_atlas_out}'):
                     # directories
@@ -112,26 +111,11 @@ for roi in rois:
                     roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries'
 
                     # Create subject volumetric ROI dir if needed
+                    if os.path.isdir(f'{datadir}/{sub}/func/rest/rois/{roi}')==False:
+                        q.create_dirs(f'{datadir}/{sub}/func/rest/rois/{roi}')
                     if os.path.isdir(roidir)==False:
                         q.create_dirs(roidir)
-
-                    # For Harvard-Oxford amygdala ROI masks in MNI space...
-                    # if roi == 'L_Amygdala' or roi == 'R_Amygdala':
-                    #     if roi == 'L_Amygdala':
-                    #         mni_roi_mask = L_amygdala_mni_mask
-                    #     else:
-                    #         mni_roi_mask = R_amygdala_mni_mask
-
-                    #     command[0] = f'flirt -2D -in {mni_roi_mask}.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                    #     command[1] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
-                    #     command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
-                    #     command[2] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -thr 0.8 -bin {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize
-                    #     command[3] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series; function takes (1) path to input NIfTI, (2) path to output text file, (3) path to mask NIfTI
-                    #     command[4] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
-                    #     q.exec_cmds(command)
                     
-                    # For Glasser 2016 HCP-MMP1 ROIs in subject anatomical space...
-                    # else:
                     # Structure fslmaths command string with all roi parcels
                     for p in roi_parcels:
                         if p == roi_parcels[0]:
@@ -148,14 +132,14 @@ for roi in rois:
                     cmd[6] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
                     cmd[7] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
                     q.exec_cmds(cmd)
-q.exec_echo('\nDone.\n')
+q.exec_echo('Done.')
 
 # %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 feat_fn = f'evo_vol_lowerlev'
 feat_df = f'{home_dir}/{feat_fn}'
 
 cmd=[None]
-commands = [None]*10
+commands = [None]*11
 for sub in q.subs:
     for session in sessions:
             for run in runs:
@@ -182,14 +166,10 @@ for sub in q.subs:
                     commands[7] = f"sed -i 's;MRISESSION;{session};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                     commands[8] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                     commands[9] = f"sed -i 's;DATADIRSTR;{datadir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                    commands[10] = f"sed -i 's;FSLDIRSTR;{home_dir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                     q.exec_cmds(commands)
-
+                    q.exec_echo(f'-------- Running Feat analysis for {sub} --------')
                     cmd[0] = f'feat {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf' # run fsf file
                     q.exec_cmds(cmd)
 
-                    # print(f'\n-------- Running Feat analysis for {sub} --------\n')
-# print('\n-------- Feat analyses done. --------\n\n')
-
-
-
-# %% Run linear model for each subject
+q.exec_echo('-------- Feat analyses done. --------')
