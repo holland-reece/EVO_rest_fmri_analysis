@@ -1,0 +1,63 @@
+---
+title: "evo_rs_vol_highlev"
+author: "Holland Brown"
+date: "2024-01-18"
+---
+
+Set up R env
+```{r install packages, include=FALSE, warning = FALSE}
+install.packages("")
+# install.packages("devtools")
+# devtools::install_github("muschellij2/neurobase")
+# neuro_install("neurobase", release = "stable")
+```
+
+```{r setup, include=FALSE, warning = FALSE}
+library(tidyr)
+library(ggplot2)
+library(tidyverse)
+library(naniar)
+library(nlme)
+library(neurobase)
+```
+
+Set variables
+```{r}
+datadir <- "/home/holland/Desktop/EVO_TEST/subjects" # main data directory
+home_dir <- "/home/holland/Desktop/EVO_TEST" # place where this script and design matrix file are kept
+setwd(home_dir) # set as working dir
+
+bold <- sprintf("%s/denoised_aggr_func.nii.gz", datadir)
+designmat <- sprintf("%s/evo_rs_vol_highlev_design", home_dir) # what file format?
+
+options(scipen = 999) # switch off scientific notation
+```
+
+-----
+NOTE: For future task-based analyses, will only look at data inside ROI, not ROI-to-whole-brain ratio
+So for future reference:
+mask <- "" # ROI mask in subject functional space; only data inside the mask will be used
+-----
+
+Get list of subject directories
+```{r}
+subject_dirs <- list.dirs(datadir,recursive = FALSE)  
+# print (subject_dirs)
+tempstr <- sprintf(".*%s", home_dir)
+
+subjectlist <- list() # init subject list
+for (subjectdir in subject_dirs) {
+  subject <- sub(tempstr, "", subjectdir) # get subject ID from path
+  print(subject)
+  subjectlist$subject
+}
+print(subjectlist)
+```
+
+```{r}
+
+```
+
+
+
+
