@@ -23,9 +23,9 @@ library(neurobase)
 
 Set variables
 ```{r}
-datadir <- "/home/holland/Desktop/EVO_TEST/subjects" # main data directory
-home_dir <- "/home/holland/Desktop/EVO_TEST" # place where this script and design matrix file are kept
-setwd(home_dir) # set as working dir
+datadir <- "/home/holland/Desktop/EVO_TEST/subjects" # main data dir
+home_dir <- "/home/holland/Desktop/EVO_TEST" # dir for this script, design mat
+setwd(home_dir) # set working dir
 
 bold <- sprintf("%s/denoised_aggr_func.nii.gz", datadir)
 designmat <- sprintf("%s/evo_rs_vol_highlev_design", home_dir) # what file format?
