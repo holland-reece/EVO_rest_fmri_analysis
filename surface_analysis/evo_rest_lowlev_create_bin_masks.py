@@ -22,7 +22,7 @@ from my_imaging_tools import fmri_tools
 
 roi = 'L_MFG'
 datadir = f'/home/holland/Desktop/EVO_TEST/subjects' # where subject folders are located
-maskdir = f'/home/holland/Desktop/EVO_TEST/EVO_lower_level_ROI_masks'
+maskdir = f'/home/holland/Desktop/EVO_TEST/EVO_rest_surface/EVO_surface_roi_masks'
 roidir = f'{maskdir}/{roi}'
 roi_bin = f'{roidir}/{roi}_bin.dscalar.nii'
 
@@ -39,7 +39,7 @@ roi_parcels = ['L_IFSa_ROI','L_46_ROI','L_p9-46v_ROI'] # L_MFG
 
 q = fmri_tools(datadir)
 sessions = ['1']
-
+subs = ['97048']
 
 # %% Create ROI mask from HCP-MMP1.0 atlas (subject-specific)
 command = [None]*3
@@ -50,12 +50,12 @@ if os.path.isdir(maskdir)==False:
 if os.path.isdir(roidir)==False:
     q.create_dirs(roidir)
 
-for sub in q.subs:
+for sub in subs:
     for session in sessions:
-        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s0.85.dtseries.nii'
         # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_s1.7_parc.ptseries.nii'
         sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'
-        subspace_atlas = f'{datadir}/{sub}/rois/{sub}_HCP-MMP1_resampled2func'
+        subspace_atlas = f'{datadir}/{sub}/{sub}_HCP-MMP1_resampled2func'
         
         # resample HCP MMP1.0 to subject's brain-ordinate space
         if os.path.isfile(subspace_atlas)==False:
@@ -115,7 +115,7 @@ command=[None]
 maskcmd=[None]*3
 for sub in q.subs:
     for session in sessions:
-        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s1.7.dtseries.nii'
+        func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_1/Rest_ICAAROMA.nii.gz/denoised_func_data_aggr_s0.85.dtseries.nii'
         # func_parc = f'{datadir}/{sub}/func/rest/session_{session}/run_1/{sub}_S{session}_R1_func_s1.7_parc.ptseries.nii'
 
         sub_roidir = f'{datadir}/{sub}/func/rois/{roi}'

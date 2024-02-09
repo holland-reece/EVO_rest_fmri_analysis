@@ -1,0 +1,198 @@
+---
+title: "R Notebook: EVO CIFT Lower-level Analysis"
+date: "2024-02-09"
+output: html_notebook
+---
+
+```{r setup, r install packages, include=FALSE, warning = FALSE}
+
+if (!requireNamespace("remotes", quietly = TRUE))
+  install.packages("remotes")
+remotes::install_github("mandymejia/ciftiTools")
+
+library(tidyr)
+library(ggplot2)
+library(tidyverse)
+library(ciftiTools)
+library(rgl)
+rgl::setupKnitr()
+
+# Sometimes the first OpenGL window does not render properly
+rgl::open3d(); rgl::close3d()
+
+```
+
+```{r}
+datadir <- "/home/holland/Desktop/EVO_TEST/subjects" # main data dir
+home_dir <- "/home/holland/Documents/GitHub_repos/EVO_rest_fmri_analysis/surface_analysis" # dir for this script, RProject, design mat, etc.
+setwd(home_dir) # set working dir
+ciftiTools.setOption("wb_path", "/home/holland/workbench") #  path to Connectome Workbench installation
+# confirm_wb_cmd_path("/usr/bin/wb_command")
+
+sessions <- list("1","2")
+runs <- list("run")
+surf_fn <- "denoised_func_data_aggr_s0.85.dtseries.nii" # main cifti file name for all subjects
+# designmat <- sprintf("%s/evo_rs_vol_highlev_design", home_dir) # what file format?
+
+subs <- list("W192","97048") # TEST
+
+# Get subject list from dirs
+# subject_dirs <- list.dirs(datadir,recursive = FALSE)  
+# # print (subject_dirs)
+# tempstr <- sprintf(".*%s", home_dir)
+# 
+# subjectlist <- list() # init subject list
+# for (subjectdir in subject_dirs) {
+#   subject <- sub(tempstr, "", subjectdir) # get subject ID from path
+#   print(subject)
+#   subjectlist$subject
+# }
+# print(subjectlist)
+```
+
+```{r}
+# Pre- vs. Post-Tx ROI-Based Analysis Within Subjects
+roiMasks_dir <- "/home/holland/Desktop/EVO_TEST/EVO_rest_surface/EVO_surface_roi_masks"
+
+# Paths to CIFTI ROI masks
+roi_masks <- list(
+  "L_MFG" = sprintf("%s/L_MFG/L_MFG_bin.dscalar.nii", roiMasks_dir)
+)
+
+# Load ROI masks
+roi_data <- lapply(roi_masks, read_cifti)
+
+roi_results <- list()
+for(roi in names(roi_data)){
+  
+  # roiMask <- read_cifti(roiMask_path)
+  
+  for(sub in subs){
+    surf_path <- sprintf("%s/%s/func/rest/session_%s/run_%s/Rest_ICAAROMA.nii.gz/%s",datadir,sub,session,run,surf_fn) # path to subject's cifti file
+    cifti_data <- read_cifti(surf_path) # load subject's cifti file
+    
+    # Multiply data by the mask to zero out non-ROI voxels (works bc ROI mask is binary)
+    roi_mask$data <- roi_data[[roi]]$data != 0
+    masked_data <- cifti_data$data * roi_mask$data
+    roi_results[[roi]] <- masked_data
+  
+}
+
+}
+
+# print(cifti_data) # Display basic information about the CIFTI data
+# str(cifti_data) # Explore the structure of the loaded data
+view_xifti_surface(masked_data) # Basic visualization (ensure you have the necessary graphical backend and permissions)
+
+```
+
+```{r}
+# Pre- vs. Post-Tx ROI-Based Analysis Within Subjects
+roiMasks_dir <- "/home/holland/Desktop/EVO_TEST/EVO_rest_surface/EVO_surface_roi_masks"
+
+
+# Paths to CIFTI ROI masks
+roi_masks <- list(
+  "L_MFG"
+)
+
+# Load ROI masks
+# roi_data <- lapply(roi_masks, read_cifti)
+
+roi_results <- list()
+for (roi in roi_masks) {
+  # Initialize an empty list for storing results for each subject within the current ROI
+  roi_results[[roi]] <- list()
+  roi_data <- read_cifti(sprintf("%s/%s/%s_bin.dscalar.nii", roiMasks_dir, roi, roi)) # read in ROI mask
+  
+  for (sub in subs) {
+    surf_path <- sprintf("%s/%s/func/rest/session_%s/run_%s/Rest_ICAAROMA.nii.gz/%s", datadir, sub, session, run, surf_fn) # subject's cifti path
+    cifti_data <- read_cifti(surf_path) # load subject's cifti file
+    
+    mask_path <- sprintf("%s/%s/func/rest/rois/%s/rest_lowerlev_surf/%s_%s_S%s_R%s_denoised_aggr_s1.7_meants.dscalar.nii",datadir,sub,roi,sub,roi,session,run) # path to subject's mean ROI time series dscalar.nii file
+    roi_data <- read_cifti(mask_path)
+    
+    # Ensure the ROI mask is binary
+    roi_mask_binary <- roi_data[[roi]]$data != 0
+    
+    # Apply the ROI mask
+    # This might need adjustment based on the exact structure of your CIFTI data and mask
+    masked_data <- apply_mask(cifti_data, roi_mask_binary)
+    
+    # Store the masked data for the subject within the ROI
+    roi_results[[roi]][[sub]] <- masked_data
+  }
+}
+
+# Function to apply the mask, needs to be defined according to your data structure
+# apply_mask <- function(cifti_data, mask) {
+#   # Example operation, replace with actual implementation suitable for your data structure
+#   # Assuming cifti_data$data is a matrix and mask is a binary matrix of the same dimensions
+#   masked_data <- cifti_data$data * mask
+#   return(masked_data)
+
+
+# view_xifti_surface(masked_data) # Basic visualization (ensure you have the necessary graphical backend and permissions)
+# xii <- read_cifti(cifti_fnames["dscalar"]) # no GIFTI included, so the default inflated surface is used.
+view_xifti_surface(
+  mask_data, idx=1:2, zlim=c(0,5), color_mode = "diverging",
+  title='color_mode = "diverging"', cex.title=1.3
+)
+```
+
+```{r}
+hcp_mmp_template_file <- ""
+for(sub in subs){
+# Construct the Workbench command for resampling
+  wb_command <- paste(
+    ciftiTools.getOption("wb_path"),
+    " -cifti-resample",
+    input_cifti_file,
+    "COLUMN",
+    hcp_mmp_template_file,
+    "COLUMN",
+    "BILINEAR",
+    output_cifti_file,
+    "-left-spheres",
+    "path/to/your/left_sphere.surf.gii path/to/hcp_mmp/left_sphere.surf.gii",
+    "-right-spheres",
+    "path/to/your/right_sphere.surf.gii path/to/hcp_mmp/right_sphere.surf.gii",
+    "-left-area-metrics",
+    "path/to/your/left_area.shape.gii path/to/hcp_mmp/left_area.shape.gii",
+    "-right-area-metrics",
+    "path/to/your/right_area.shape.gii path/to/hcp_mmp/right_area.shape.gii",
+    sep = " "
+  )
+
+# Execute the command
+system(wb_command)
+}
+```
+
+```{r}
+# TEST: extract HCP-MMP1 data from CIFTIs
+
+# Paths to CIFTI ROI masks
+roi_masks <- list(
+  "L_MFG"
+)
+
+roi_results <- list()
+for (roi in roi_masks) {
+  
+  # Initialize an empty list for storing results for each subject within the current ROI
+  roi_results[[roi]] <- list()
+  # roi_data <- read_cifti(sprintf("%s/%s/%s_bin.dscalar.nii", roiMasks_dir, roi, roi)) # read in ROI mask
+  
+  for (sub in subs) {
+    surf_path <- sprintf("%s/%s/func/rest/session_%s/run_%s/Rest_ICAAROMA.nii.gz/%s", datadir, sub, session, run, surf_fn) # subject's cifti path
+    xifti <- read_cifti(surf_path) # load subject's cifti file
+    
+    # xifti <- read_cifti("")
+    parcellated_data <- apply_parc(xifti, parc = "HCP_MMP")
+    
+  }
+}
+
+view_xifti_surface(parcellated_data)
+```
