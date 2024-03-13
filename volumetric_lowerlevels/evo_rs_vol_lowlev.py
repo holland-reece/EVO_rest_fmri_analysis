@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-03-08
+# Updated 2023-03-11
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -32,7 +32,7 @@ from my_imaging_tools import fmri_tools
 # args = parser.parse_args()
 
 # Important dirs
-home_dir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
 
 # q = fmri_tools(studydir=datadir, subjectlist_text=args.subjecttextlist) # init functions and subject list
 
@@ -73,16 +73,18 @@ for site in sites:
             q.exec_echo(f'Subject {sub} does not have a volumetric parcellation directory.')
 
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
-cmd = [None]*8
+cmd = [None]*9
 command = [None]
-sessions = ['2']
+# sessions = ['1']
+# subs = ['97048'] # test
+# rois = ['L_MFG'] # test
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
     q = fmri_tools(datadir)
     for roi in rois:
-        command = [f'\n------------------------- Extracting time series: {roi} -------------------------\n']
-        subprocess.run(command, shell=True, executable='/bin/bash')
+        print(f'\n------------------------- Extracting time series: {roi} -------------------------\n')
+        # subprocess.run(command, shell=True, executable='/bin/bash')
 
         # ROI parcel names from HCP MMP1.0 atlas labels
         if roi == 'R_MFG':
@@ -99,6 +101,7 @@ for site in sites:
             roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
         for sub in q.subs:
+            print(f'{sub}')
             sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # path to Glasser atlas in subject func space
             for session in sessions:
                 for run in runs:
@@ -106,7 +109,7 @@ for site in sites:
                         q.exec_echo(f'{sub}_S{session}_R{run} : {roi}')
                         glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc.nii.gz'
                         # if os.path.isfile(f'{glasser_atlas_out}'): #and (os.path.isfile(f'{roi_ts}_thr0.8.txt')==False):
-                            # directories
+
                         roidir = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol' # output dir for volumetric roi analysis
                         sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # subject's HCP-MMP1 roi masks dir
 
@@ -132,27 +135,36 @@ for site in sites:
                             else:
                                 cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
 
-                        if os.path.isfile(f'{roi_ts}_thr0.8.txt')==False:
+                        if os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==False:
                             cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
                             cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
                             cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                            cmd[3] = f'fslmaths {func_in}.nii.gz -add 10000 {func_in}_remean.nii.gz' # recenter ROI mask at 10000
-                            cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
-                            cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
-                            cmd[6] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
-                            cmd[7] = f'fslmeants -i {func_in}_remean.nii.gz -o {roi_ts}_thr0.8.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
+                            cmd[3] = f'fslroi {func_in}.nii.gz {func_in}_rmvols.nii.gz 10 394' # Remove first 10 volumes (wasn't done during MEP)
+                            cmd[4] = f'fslmaths {func_in}_rmvols.nii.gz -add 10000 {func_in}_rmvols_remean.nii.gz' # recenter ROI mask at 10000
+                            cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
+                            cmd[6] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
+                            cmd[7] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_v2.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
+                            cmd[8] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_thr0.8_v2.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
                             q.exec_cmds(cmd)
-                        elif os.path.isfile(f'{roi_ts}_thr0.8.txt')==True:
+                        elif os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==True:
                             q.exec_echo(f'Subject {sub} already has {roi} text file...')
     q.exec_echo('Done.')
 
-# %% 6. Run lower-level analysis using design template (ref: first_level5.sh)
+# 6. Run lower-level analysis using design template (ref: first_level5.sh)
 cmd=[None]
-commands = [None]*11
+commands = [None]*9
 cmds = [None]*2
 
-command = [f'\n------------------------- Running Feat lower-levels -------------------------\n']
-subprocess.run(command, shell=True, executable='/bin/bash')
+# sessions = ['1'] # test
+# subs = ['97048'] # test
+# rois = ['L_MFG'] # test
+# sites = ['NKI'] # test
+
+print(f'\n------------------------- Running Feat lower-levels -------------------------\n')
+# subprocess.run(command, shell=True, executable='/bin/bash')
+# subs = ['97048'] # test
+# rois = ['R_rACC'] # test
+# sites = ['NKI'] # test
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
@@ -171,7 +183,7 @@ for site in sites:
                 for run in runs:
                     func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA/{func_fn}'
                     # print('test1')
-                    if os.path.isfile(f'{func_in}.nii.gz')==True:
+                    if os.path.isfile(f'{func_in}_rmvols_remean.nii.gz')==True:
                         # print(func_in)
                         
                         for roi in rois:
@@ -181,28 +193,27 @@ for site in sites:
                                 cmd[0] = f'mkdir {outdir}'
                                 q.exec_cmds(cmd)
 
-                            roi_ts_str = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/{roi}_S{session}_R{run}_timeseries_thr0.8.txt'
+                            # use version 2 roi txt file - was created after volumes were removed
+                            roi_ts_str = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/{roi}_S{session}_R{run}_timeseries_thr0.8_v2.txt'
                             if os.path.isfile(roi_ts_str)==False:
                                 q.exec_echo(f'\n{sub} does not have an extracted {roi} timeseries file.\n')
 
-                            # Remove first 10 volumes before running Feat (to get around issues running Feat in cluster)
-                            # if os.path.isfile(f'{func_in}_rmvols.nii.gz')==False:
-                            #     cmds[0] = f'cp {func_in}.nii.gz {func_in}_rmvols.nii.gz'
-                            #     cmds[1] = f'fslroi {func_in}_rmvols.nii.gz {func_in}_rmvols.nii.gz 10 0'
-                            #     q.exec_cmds(cmds)
+                            # Copy Fest design file to subject's ROI dir and rename
+                            cmds[0] = f'cp {home_dir}/{feat_fn}_template.fsf {outdir}' # copy design file into preproc dir
+                            cmds[1] = f'mv {outdir}/{feat_fn}_template.fsf {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf'
+                            q.exec_cmds(cmds)
+                            print(cmds[0])
 
                             # Search and replace variables in Feat design file
-                            commands[0] = f'cp {feat_df}_template.fsf {outdir}' # copy design file into preproc dir
-                            commands[1] = f'mv {outdir}/{feat_fn}_template.fsf {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf'
-                            commands[2] = f"sed -i 's;TIMESTEP;{timestep};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[3] = f"sed -i 's;INPUTNIFTI;{func_in}_rmvols.nii.gz;g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[4] = f"sed -i 's;REGIONOFINTERESTTXT;{roi_ts_str};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[5] = f"sed -i 's;REGIONOFINTEREST;{roi};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[6] = f"sed -i 's;SUBJ;{sub};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[7] = f"sed -i 's;MRISESSION;{session};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[8] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[9] = f"sed -i 's;DATADIRSTR;{datadir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[10] = f"sed -i 's;FSLDIRSTR;{home_dir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[0] = f"sed -i 's;TIMESTEP;{timestep};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[1] = f"sed -i 's;INPUTNIFTI;{func_in}_rmvols_remean.nii.gz;g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf" # needs to be remeaned version of func file
+                            commands[2] = f"sed -i 's;REGIONOFINTERESTTXT;{roi_ts_str};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[3] = f"sed -i 's;REGIONOFINTEREST;{roi};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[4] = f"sed -i 's;SUBJ;{sub};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[5] = f"sed -i 's;MRISESSION;{session};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[6] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[7] = f"sed -i 's;DATADIRSTR;{datadir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[8] = f"sed -i 's;FSLDIRSTR;{home_dir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             q.exec_cmds(commands)
 
                             q.exec_echo(f'\n-------- Running Feat analysis for {sub} --------\n')
