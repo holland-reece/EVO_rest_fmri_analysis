@@ -75,9 +75,6 @@ for site in sites:
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
 cmd = [None]*9
 command = [None]
-# sessions = ['1']
-# subs = ['97048'] # test
-# rois = ['L_MFG'] # test
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
@@ -155,16 +152,7 @@ cmd=[None]
 commands = [None]*9
 cmds = [None]*2
 
-# sessions = ['1'] # test
-# subs = ['97048'] # test
-# rois = ['L_MFG'] # test
-# sites = ['NKI'] # test
-
 print(f'\n------------------------- Running Feat lower-levels -------------------------\n')
-# subprocess.run(command, shell=True, executable='/bin/bash')
-# subs = ['97048'] # test
-# rois = ['R_rACC'] # test
-# sites = ['NKI'] # test
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
