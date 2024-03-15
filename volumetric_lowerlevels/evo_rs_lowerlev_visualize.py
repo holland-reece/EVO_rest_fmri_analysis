@@ -5,7 +5,9 @@
 # Updated 2023-03-15
 # Created 2024-03-15
 
-# NOTE: numpy can't read NIFTIs; use nibabel to read in ROI masks for carpet plots
+# NOTE: for plotting examples, refer to: https://www.sciencedirect.com/science/article/pii/S106474812030292X
+
+# Next: numpy can't read NIFTIs; use nibabel to read in ROI masks for carpet plots
 
 # --------------------------------------------------------------------------------------
 # %%
