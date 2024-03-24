@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2024-03-11
+# Updated 2024-03-22
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -76,6 +76,7 @@ for site in sites:
 cmd = [None]*9
 command = [None]
 
+
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
     q = fmri_tools(datadir)
@@ -137,17 +138,17 @@ for site in sites:
                             cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
                             cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
                             cmd[3] = f'fslroi {func_in}.nii.gz {func_in}_rmvols.nii.gz 10 394' # Remove first 10 volumes (wasn't done during MEP)
-                            cmd[4] = f'fslmaths {func_in}_rmvols.nii.gz -add 10000 {func_in}_rmvols_remean.nii.gz' # recenter ROI mask at 10000
+                            cmd[4] = f'fslmaths {func_in}_rmvols.nii.gz -add 10000 {func_in}_rmvols_remean.nii.gz' # recenter functional data at 10000
                             cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
                             cmd[6] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
-                            cmd[7] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_v2.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
-                            cmd[8] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_thr0.8_v2.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
+                            cmd[7] = f'fslmeants -i {func_in}_rmvols.nii.gz -o {roi_ts}_v2.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
+                            cmd[8] = f'fslmeants -i {func_in}_rmvols.nii.gz -o {roi_ts}_thr0.8_v2.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
                             q.exec_cmds(cmd)
                         elif os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==True:
                             q.exec_echo(f'Subject {sub} already has {roi} text file...')
     q.exec_echo('Done.')
 
-# 6. Run lower-level analysis using design template (ref: first_level5.sh)
+#%% 6. Run lower-level analysis using design template (ref: first_level5.sh)
 cmd=[None]
 commands = [None]*9
 cmds = [None]*2
@@ -163,7 +164,7 @@ for site in sites:
     elif site == 'UW':
         timestep = '1.399999'
 
-    for sub in q.subs:
+    for sub in q.subs: # test
         print(f'{sub}\n')
         for session in sessions:
             # only proceed if participant has processed func file for this session
@@ -171,7 +172,7 @@ for site in sites:
                 for run in runs:
                     func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA/{func_fn}'
                     # print('test1')
-                    if os.path.isfile(f'{func_in}_rmvols_remean.nii.gz')==True:
+                    if os.path.isfile(f'{func_in}_remean.nii.gz')==True:
                         # print(func_in)
                         
                         for roi in rois:
@@ -182,7 +183,7 @@ for site in sites:
                                 q.exec_cmds(cmd)
 
                             # use version 2 roi txt file - was created after volumes were removed
-                            roi_ts_str = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/{roi}_S{session}_R{run}_timeseries_thr0.8_v2.txt'
+                            roi_ts_str = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/{roi}_S{session}_R{run}_timeseries_thr0.8_v3.txt'
                             if os.path.isfile(roi_ts_str)==False:
                                 q.exec_echo(f'\n{sub} does not have an extracted {roi} timeseries file.\n')
 
@@ -194,7 +195,7 @@ for site in sites:
 
                             # Search and replace variables in Feat design file
                             commands[0] = f"sed -i 's;TIMESTEP;{timestep};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
-                            commands[1] = f"sed -i 's;INPUTNIFTI;{func_in}_rmvols_remean.nii.gz;g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf" # needs to be remeaned version of func file
+                            commands[1] = f"sed -i 's;INPUTNIFTI;{func_in}_rmvols.nii.gz;g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf" # needs to be remeaned version of func file
                             commands[2] = f"sed -i 's;REGIONOFINTERESTTXT;{roi_ts_str};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             commands[3] = f"sed -i 's;REGIONOFINTEREST;{roi};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             commands[4] = f"sed -i 's;SUBJ;{sub};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
