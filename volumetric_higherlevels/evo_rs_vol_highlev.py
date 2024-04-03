@@ -2,9 +2,11 @@
 
 # Holland Brown
 
-# Updated 2024-03-29
+# Updated 2024-04-03
 # Created 2024-03-20
 
+# NOTE: 2024-03-29 kernel crashes; see GitHub bug report >> https://github.com/microsoft/vscode-jupyter/wiki/Kernel-crashes
+    # 2024-04-03 created new environment (evo-fmri) and installed numpy, nibabel, statsmodels, and pandas fresh
 
 
 # %
