@@ -9,106 +9,107 @@
 
 # %%
 import os
+import csv
+import glob
+import subprocess
 import numpy as np
 import pandas as pd
 import nibabel as nib
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
 from my_imaging_tools import fmri_tools
-import csv
-
-
-def create_mixed_effects_model(connectivity_data_session1, connectivity_data_session2, treatment_labels):
-    # Convert inputs to numpy arrays if they are not already
-    connectivity_data_session1 = np.array(connectivity_data_session1)
-    connectivity_data_session2 = np.array(connectivity_data_session2)
-
-    # Create a DataFrame for the model
-    df = pd.DataFrame({
-        'Session1_Connectivity': connectivity_data_session1.flatten(),
-        'Session2_Connectivity': connectivity_data_session2.flatten(),
-        'Treatment': treatment_labels * connectivity_data_session1.shape[0]  # Repeat each treatment label for each subject
-    })
-
-    # Fit the mixed effects model
-    formula = 'Session2_Connectivity ~ Session1_Connectivity + Treatment'
-    model = smf.mixedlm(formula, df, groups=df.index)
-    result = model.fit()
-
-    return result
-
 
 
 
 # Set up
 home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
 
 sessions = ['1','2']
 # rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 rois = ['L_MFG'] # test
 sites = ['NKI','UW'] # collection sites (also names of dirs)
-num_subjects = 55
+# num_subjects = 55
 
 
-# %% TEST: check number of volumes for all participants
-dir = f'{home_dir}/UW'
-q = fmri_tools(dir)
-cmd = [None]*2
-for sub in q.subs:
-    cmd[0] = f'fslnvols {dir}/{sub}/func/unprocessed/rest/session_1/run_1/Rest_S1_R1_E1.nii.gz'
-    cmd[1] = f'fslnvols {dir}/{sub}/func/unprocessed/rest/session_2/run_1/Rest_S2_R1_E1.nii.gz'
-    q.exec_cmds(cmd)
-
-
-# %% Read in Tx group list CSV file
+# %% Read in Tx group labels; warp Feat outputs to standard (MNI152 1mm) space
 with open('/home/holland/Desktop/EVO_Tx_groups.csv', mode ='r')as file:
     TxGroups = csv.reader(file)
     group_labels = []
     for line in TxGroups:
         group_labels.append(line)
         print(line)
-TxLabels = []
-matrix = np.zeros((902629,55)) # for each subject, will reshape NIFTI into a vector -> 1 column
-# matrix = np.zeros(91,109,91,num_subjects)
-MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
+
 
 cmd = [None]
 for roi in rois:
     for session in sessions:
-        matrix = np.zeros((902629,51)) # number of voxels by number of participants
-        i = 0 # init counter (for indexing final output matrix)
         for site in sites:
             datadir = f'{home_dir}/{site}' # where subject dirs are located
             q = fmri_tools(datadir)
-            # for each subject in group_labels list: save group label, normalize COPE, and save COPE as col of matrix
-            for label_pair in group_labels:
-                # label_pair is a pair containing subject ID and treatment group
-                sub = label_pair[0]
-                Tx = label_pair[1]
-                # feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/rendered_thresh_zstat1.nii.gz'
-                feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cluster_mask_zstat1'
-                cmd[0] = f'fnirt --ref={MNI_std_path} --in={feat_file_path}.nii.gz --iout={feat_file_path}_MNIstd.nii.gz'
-
-
-                # check that FSL Feat stats dir exists
-                if os.path.exists(f'{feat_file_path}_MNIstd.nii.gz'):
-                    if session == '1' and roi == rois[0]: # only save treatment label for each subject once
-                        TxLabels.append(Tx) # save Tx labels in a list, but only once per subject
-
-                    # load and flatten COPE data into a vector
-                    nii = nib.load(feat_file_path) # read in NIFTI file
-                    data = nii.get_fdata() # reshape into vector (length: total number of voxels)
-                    
-                    # normalize COPE distribution so its magnitude is 1 (divide by l2 norm) -> puts all vectors on same scale
-                    # l2_norm = np.linalg.norm(data)
-                    # data_norm = data / l2_norm
-                    # if np.sum(data_norm) == 0: # check that vector is not all zeros
-                    #     print(f'{sub}, {roi}, S{session} has 0 sum...')
-
-                    # data_norm.tofile(norm_fn, sep=',') # save normalized vector
-                    matrix[:,i] = data.transpose() # append to input matrix
-                    i += 1 # update counter
-                else:
-                    if (sub[0]=='9' and site=='NKI') or (sub[0]=='W' and site=='UW'):
-                        print(f'Does not exist:\n\t{feat_file_path}\n')
+            for sub in q.subs:
+                if os.path.isfile(f'{feat_file_path}_MNIstd_TxGroup{Tx}.nii.gz')==False:
+                    for label_pair in group_labels:
+                        if label_pair[0] == sub: # label_pair is a pair containing subject ID and treatment group
+                            Tx = label_pair[1] # get treatment group label for this subject
+                    feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/cluster_mask_zstat1'
+                
+                    print(f'Converting {sub}, session {session}, {roi} to standard space...')
+                    cmd[0] = f'fnirt --ref={MNI_std_path} --in={feat_file_path}.nii.gz --iout={feat_file_path}_MNIstd_TxGroup{Tx}.nii.gz'
+                    q.exec_cmds(cmd)
     q.exec_echo('Done.')
+
+# %% Normalize all standard-space z-score cluster maps
+# cmd = [None]*2
+# for roi in rois:
+#     for session in sessions:
+#         for site in sites:
+#             datadir = f'{home_dir}/{site}' # where subject dirs are located
+#             q = fmri_tools(datadir)
+#             for sub in q.subs:
+#                 for label_pair in group_labels:
+#                     if label_pair[0] == sub: # label_pair is a pair containing subject ID and treatment group
+#                         Tx = label_pair[1] # get treatment group label for this subject
+#                 feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/cluster_mask_zstat1_MNIstd_TxGroup{Tx}'
+                
+                
+
+#                 # Save bash outputs for mean and stddev
+#                 q.exec_echo(f'Normalizing {sub}, session {session}, {roi}...')
+#                 fslstats_cmd_str = ["fslstats", f'{feat_file_path}.nii.gz', "-M", "-S"]
+#                 fslstats_output = subprocess.run(fslstats_cmd_str, capture_output=True, text=True)
+#                 mean, stddev = fslstats_output.stdout.strip().split() # save mean and stddev
+
+#                 # Normalize
+#                 fslmaths_command = [
+#                     "fslmaths",
+#                     f'{feat_file_path}.nii.gz',
+#                     "-sub", mean,
+#                     "-div", stddev,
+#                     f'{feat_file_path}_norm.nii.gz'
+#                 ]
+#                 subprocess.run(fslmaths_command)
+
+#     q.exec_echo('Done.')
+
+
+
+# %% Add up and average the Feat output files
+cmd = [None]
+Tx = '0' # run one treatment group at a time
+session = '1' # run one session at a time
+roi = 'L_MFG' # run one roi at a time
+avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S{session}_TxGroup{Tx}_avg.nii.gz'
+
+all_paths = glob.glob(f'{datadir}/{sites[0]}/*/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/cluster_mask_zstat1_MNIstd_TxGroup{Tx}.nii.gz',f'{datadir}/{sites[1]}/*/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/cluster_mask_zstat1_MNIstd_TxGroup{Tx}.nii.gz')
+print(len(all_paths))
+
+cmd = [None]
+for nifti in all_paths:
+    if nifti == all_paths[0]:
+        cmd_str = f'fslmaths {nifti}'
+    else:
+        cmd_string = f'{cmd_str} -add {nifti}'
+cmd_str = f'{cmd_str} -div {len(all_paths)} {avg_niftis_path}'
+
+

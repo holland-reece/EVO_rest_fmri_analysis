@@ -192,11 +192,3 @@ print(len(TxLabels))
 # formula = 'Session2_Connectivity ~ Session1_Connectivity + Treatment'
 # model = smf.mixedlm(formula, df, groups=df.index)
 # result = model.fit()
- # %% Warp all to standard, take mean brain map
-for site in sites:
-    q = datadir = f'{home_dir}/{site}' # where subject dirs are located
-    q = fmri_tools(datadir)
-    for roi in rois:
-        for session in sessions:
-            for sub in q.subs:
-                feat_output_file_path = f'{datadir}/{sub}/func/rest/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cope1.nii.gz'
