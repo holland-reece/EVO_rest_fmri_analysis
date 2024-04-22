@@ -1,0 +1,114 @@
+# EVO Post-MEP Resting-State Higher-Level Mixed Effects Linear Model Using Python statsmodels
+
+# Holland Brown
+
+# Updated 2024-04-22
+# Created 2024-04-22
+
+# -----------------------------------------------------------------------------------------------
+
+# %%
+import os
+import numpy as np
+import pandas as pd
+import nibabel as nib
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+from my_imaging_tools import fmri_tools
+import csv
+
+
+def create_mixed_effects_model(connectivity_data_session1, connectivity_data_session2, treatment_labels):
+    # Convert inputs to numpy arrays if they are not already
+    connectivity_data_session1 = np.array(connectivity_data_session1)
+    connectivity_data_session2 = np.array(connectivity_data_session2)
+
+    # Create a DataFrame for the model
+    df = pd.DataFrame({
+        'Session1_Connectivity': connectivity_data_session1.flatten(),
+        'Session2_Connectivity': connectivity_data_session2.flatten(),
+        'Treatment': treatment_labels * connectivity_data_session1.shape[0]  # Repeat each treatment label for each subject
+    })
+
+    # Fit the mixed effects model
+    formula = 'Session2_Connectivity ~ Session1_Connectivity + Treatment'
+    model = smf.mixedlm(formula, df, groups=df.index)
+    result = model.fit()
+
+    return result
+
+
+
+
+# Set up
+home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+
+sessions = ['1','2']
+# rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+rois = ['L_MFG'] # test
+sites = ['NKI','UW'] # collection sites (also names of dirs)
+num_subjects = 55
+
+
+# %% TEST: check number of volumes for all participants
+dir = f'{home_dir}/UW'
+q = fmri_tools(dir)
+cmd = [None]*2
+for sub in q.subs:
+    cmd[0] = f'fslnvols {dir}/{sub}/func/unprocessed/rest/session_1/run_1/Rest_S1_R1_E1.nii.gz'
+    cmd[1] = f'fslnvols {dir}/{sub}/func/unprocessed/rest/session_2/run_1/Rest_S2_R1_E1.nii.gz'
+    q.exec_cmds(cmd)
+
+
+# %% Read in Tx group list CSV file
+with open('/home/holland/Desktop/EVO_Tx_groups.csv', mode ='r')as file:
+    TxGroups = csv.reader(file)
+    group_labels = []
+    for line in TxGroups:
+        group_labels.append(line)
+        print(line)
+TxLabels = []
+matrix = np.zeros((902629,55)) # for each subject, will reshape NIFTI into a vector -> 1 column
+# matrix = np.zeros(91,109,91,num_subjects)
+MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
+
+cmd = [None]
+for roi in rois:
+    for session in sessions:
+        matrix = np.zeros((902629,51)) # number of voxels by number of participants
+        i = 0 # init counter (for indexing final output matrix)
+        for site in sites:
+            datadir = f'{home_dir}/{site}' # where subject dirs are located
+            q = fmri_tools(datadir)
+            # for each subject in group_labels list: save group label, normalize COPE, and save COPE as col of matrix
+            for label_pair in group_labels:
+                # label_pair is a pair containing subject ID and treatment group
+                sub = label_pair[0]
+                Tx = label_pair[1]
+                # feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/rendered_thresh_zstat1.nii.gz'
+                feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cluster_mask_zstat1'
+                cmd[0] = f'fnirt --ref={MNI_std_path} --in={feat_file_path}.nii.gz --iout={feat_file_path}_MNIstd.nii.gz'
+
+
+                # check that FSL Feat stats dir exists
+                if os.path.exists(f'{feat_file_path}_MNIstd.nii.gz'):
+                    if session == '1' and roi == rois[0]: # only save treatment label for each subject once
+                        TxLabels.append(Tx) # save Tx labels in a list, but only once per subject
+
+                    # load and flatten COPE data into a vector
+                    nii = nib.load(feat_file_path) # read in NIFTI file
+                    data = nii.get_fdata() # reshape into vector (length: total number of voxels)
+                    
+                    # normalize COPE distribution so its magnitude is 1 (divide by l2 norm) -> puts all vectors on same scale
+                    # l2_norm = np.linalg.norm(data)
+                    # data_norm = data / l2_norm
+                    # if np.sum(data_norm) == 0: # check that vector is not all zeros
+                    #     print(f'{sub}, {roi}, S{session} has 0 sum...')
+
+                    # data_norm.tofile(norm_fn, sep=',') # save normalized vector
+                    matrix[:,i] = data.transpose() # append to input matrix
+                    i += 1 # update counter
+                else:
+                    if (sub[0]=='9' and site=='NKI') or (sub[0]=='W' and site=='UW'):
+                        print(f'Does not exist:\n\t{feat_file_path}\n')
+    q.exec_echo('Done.')

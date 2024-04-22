@@ -91,30 +91,33 @@ with open('/home/holland/Desktop/EVO_Tx_groups.csv', mode ='r')as file:
 TxLabels = []
 matrix = np.zeros((902629,55)) # for each subject, will reshape NIFTI into a vector -> 1 column
 # matrix = np.zeros(91,109,91,num_subjects)
+MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
 
+cmd = [None]
 for roi in rois:
     for session in sessions:
         matrix = np.zeros((902629,51)) # number of voxels by number of participants
         i = 0 # init counter (for indexing final output matrix)
         for site in sites:
             datadir = f'{home_dir}/{site}' # where subject dirs are located
-
+            q = fmri_tools(datadir)
             # for each subject in group_labels list: save group label, normalize COPE, and save COPE as col of matrix
             for label_pair in group_labels:
                 # label_pair is a pair containing subject ID and treatment group
                 sub = label_pair[0]
                 Tx = label_pair[1]
-                # cope_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/rendered_thresh_zstat1.nii.gz'
-                cope_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cope1.nii.gz'
+                # feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/rendered_thresh_zstat1.nii.gz'
+                feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cluster_mask_zstat1.nii.gz'
+                cmd[0] = f'fnirt --ref={MNI_std_path} --in={feat_file_path}'
 
 
                 # check that FSL Feat stats dir exists
-                if os.path.exists(cope_path):
+                if os.path.exists(feat_file_path):
                     if session == '1' and roi == rois[0]: # only save treatment label for each subject once
                         TxLabels.append(Tx) # save Tx labels in a list, but only once per subject
 
                     # load and flatten COPE data into a vector
-                    nii = nib.load(cope_path) # read in NIFTI file
+                    nii = nib.load(feat_file_path) # read in NIFTI file
                     data = nii.get_fdata() # reshape into vector (length: total number of voxels)
                     
                     # normalize COPE distribution so its magnitude is 1 (divide by l2 norm) -> puts all vectors on same scale
@@ -128,15 +131,15 @@ for roi in rois:
                     i += 1 # update counter
                 else:
                     if (sub[0]=='9' and site=='NKI') or (sub[0]=='W' and site=='UW'):
-                        print(f'Does not exist:\n\t{cope_path}\n')
+                        print(f'Does not exist:\n\t{feat_file_path}\n')
 
         if session == '1':
             matrix1 = np.array(matrix)
-            matrix_fn = f'/home/holland/Desktop/{roi}_S{session}_rest_thresh_zstat.csv'
+            matrix_fn = f'/home/holland/Desktop/{roi}_S{session}_rest_cluster_zstat.csv'
             matrix1.tofile(matrix_fn, sep=',')
         elif session == '2':
             matrix2 = np.array(matrix)
-            matrix_fn = f'/home/holland/Desktop/{roi}_S{session}_rest_thresh_zstat.csv'
+            matrix_fn = f'/home/holland/Desktop/{roi}_S{session}_rest_cluster_zstat.csv'
             matrix2.tofile(matrix_fn, sep=',')
 
 # %% Calculate difference between correlations S1 and S2 for each subject
@@ -189,5 +192,11 @@ print(len(TxLabels))
 # formula = 'Session2_Connectivity ~ Session1_Connectivity + Treatment'
 # model = smf.mixedlm(formula, df, groups=df.index)
 # result = model.fit()
-
-
+ # %% Warp all to standard, take mean brain map
+for site in sites:
+    q = datadir = f'{home_dir}/{site}' # where subject dirs are located
+    q = fmri_tools(datadir)
+    for roi in rois:
+        for session in sessions:
+            for sub in q.subs:
+                feat_output_file_path = f'{datadir}/{sub}/func/rest/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cope1.nii.gz'
