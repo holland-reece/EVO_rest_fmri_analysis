@@ -1,0 +1,25 @@
+"0",""
+"0","if (!requireNamespace(""remotes"", quietly = TRUE))"
+"0","  install.packages(""remotes"")"
+"0","remotes::install_github(""mandymejia/ciftiTools"")"
+"2","Skipping install of 'ciftiTools' from a github remote, the SHA1 (23d148be) has not changed since last install.
+  Use `force = TRUE` to force installation
+"
+"0","library(tidyr)"
+"0","library(ggplot2)"
+"0","library(tidyverse)"
+"0","library(ciftiTools)"
+"0","library(rgl)"
+"2","This build of rgl does not include OpenGL functions.  Use
+ rglwidget() to display results, e.g. via options(rgl.printRglwidget = TRUE).
+"
+"0","rgl::setupKnitr()"
+"0",""
+"0","# Sometimes the first OpenGL window does not render properly"
+"0","rgl::open3d(); rgl::close3d()"
+"1","null "
+"1","
+"
+"1","   2 "
+"1","
+"
