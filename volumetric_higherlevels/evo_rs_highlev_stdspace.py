@@ -230,14 +230,17 @@ plt.show()
 # NOTE: BandTogether = 0; WORDS! = 1
 roi = 'R_MFG'
 # group_map1_t1 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
-group_map = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
+map = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg_brain.nii.gz')
+map = map.get_fdata()
+std_mask = nib.load(f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
+std_mask = std_mask.get_fdata()
 
-map = group_map.get_fdata()
+std_mask[std_mask != 0] = 1
 
 fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 
 # Plot WORDS! (group 1) time difference
-img = np.rot90(map[:,:,90])
+img = np.rot90(map[:,:,40])
 ax0 = ax.imshow(img, cmap='hot', interpolation='nearest')
 cb = plt.colorbar(ax0)
 cb.set_label('COPE values')
