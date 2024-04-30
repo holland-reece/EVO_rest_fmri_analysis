@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2024-04-28
+# Updated 2024-04-30
 # Created 2024-04-22
 
 # NOTE: BandTogether = 0; WORDS! = 1
@@ -18,6 +18,7 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 from multiprocessing import Pool
 import statsmodels.api as sm
 import statsmodels.formula.api as smf
@@ -64,6 +65,13 @@ def main(): # define class to set up parallelized commands
         pool.close()
         pool.join()
 
+def z_score(data):
+    """Return the z-score of the array."""
+    mean = np.mean(data)
+    std = np.std(data)
+    z_scores = (data - mean) / std
+    return z_scores
+
 
 
 
@@ -82,8 +90,8 @@ sites = ['NKI','UW'] # collection sites (also names of dirs)
 
 # num_subjects = 55
 
+# %% Batch create and execute fnirt commands; register individual COPEs to MNI152 standard
 
-# Batch create and execute fnirt commands
 if __name__ == '__main__':
     main()
 
@@ -161,12 +169,12 @@ if __name__ == '__main__':
 cmd = [None]
 Tx = '1' # run one treatment group at a time
 session = '2' # run one session at a time
-roi = 'L_MFG' # run one roi at a time
+roi = 'L_rACC' # run one roi at a time
 q = fmri_tools(home_dir)
 
 # avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S{session}_TxGroup{Tx}_avg_cope'
 # avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S{session}_COPE_MNIstd_TxGroup{Tx}_avg'
-avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S{session}_COPE_MNIstd_TxGroup{Tx}_avg'
+avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}_S{session}_COPE_MNIstd_TxGroup{Tx}_avg'
 
 all_paths = glob.glob(f'{home_dir}/{sites[0]}/*/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/COPE_MNIstd_TxGroup{Tx}.nii.gz')#,f'{home_dir}/{sites[1]}/*/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/cluster_mask_zstat1_MNIstd_TxGroup{Tx}.nii.gz')
 all_paths += glob.glob(f'{home_dir}/{sites[1]}/*/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/COPE_MNIstd_TxGroup{Tx}.nii.gz')
@@ -182,9 +190,10 @@ for n in all_paths:
     else:
         cmd_str = f'{cmd_str} -add {n}'
 cmd[0] = f'{cmd_str} -div {len(all_paths)} {avg_niftis_path}'
+# print(cmd) # test - copy and run in terminal
 q.exec_cmds(cmd)
 
-# Threshold and save
+# # Threshold and save
 # avg_niftis_path = f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S{session}_COPE_MNIstd_TxGroup{Tx}_avg'
 
 # cmd = [None]
@@ -192,45 +201,98 @@ q.exec_cmds(cmd)
 # q.exec_cmds(cmd)
 
 
-# %% Plotting brain maps
-# NOTE: BandTogether = 0; WORDS! = 1
-# roi = 'R_MFG'
+# %% Plot abs value differences (post- minus pre-TX) in ROI-whole brain correlation (COPEs)
+"""
+NOTE: These plots show areas of brain (group avg) with greatest change in ROI-whole brain correlation, 
+not negative vs. positive correlation
 
-group_map0_t1 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_TxGroup0_avg.nii.gz')
-map0_t1 = group_map0_t1.get_fdata()
-group_map0_t2 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S2_TxGroup0_avg.nii.gz')
-map0_t2 = group_map0_t2.get_fdata()
-group_map1_t1 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_TxGroup1_p=0.05.nii.gz')
-map1_t1 = group_map1_t1.get_fdata()
-group_map1_t2 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S2_TxGroup1_avg.nii.gz')
-map1_t2 = group_map1_t2.get_fdata()
+>>> Need a different figure to show areas of positive vs. negative correlation
 
-fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+NOTE: BandTogether = 0; WORDS! = 1
+"""
 
-# Plot WORDS! (group 1) time difference
-diff_img0 = np.rot90(abs(abs(map0_t1[:,:,90]) - abs(map0_t2[:,:,90])))
-ax0 = ax[0].imshow(diff_img0, cmap='hot', interpolation='nearest')
-cb = plt.colorbar(ax0)
-cb.set_label('Baseline minus Post-TX values')
-ax[0].set_title(f'WORDS! Pre- to Post- Tx Change: {roi}')
-ax[0].axis('off')
+threshold = 3.1  # Define threshold value (if z-scoring)
+higherlev_dir = '/media/holland/EVO_Estia/EVO_rest_higherlev_vol' # where avg COPE dir is; destination for figures
+rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+for roi in rois:
 
-# Plot BandTogether (group 0) time difference
-diff_img1 = np.rot90(abs(abs(map1_t1[:,:,90]) - abs(map1_t2[:,:,90])))# - abs(map1_t2[:,:,90])))
-ax1 = ax[1].imshow(diff_img1, cmap='hot', interpolation='nearest')
-cb = plt.colorbar(ax1)
-cb.set_label('Baseline minus Post-TX values')
-ax[1].set_title(f'BandTogether Pre- to Post- Tx Change: {roi}')
-ax[1].axis('off')
+    # Load avg COPE maps for both groups and time points
+    group_map0_t1 = nib.load(f'{higherlev_dir}/avg_COPEs/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
+    map0_t1 = group_map0_t1.get_fdata()
+    group_map0_t2 = nib.load(f'{higherlev_dir}/avg_COPEs/{roi}_S2_COPE_MNIstd_TxGroup0_avg.nii.gz')
+    map0_t2 = group_map0_t2.get_fdata()
+    group_map1_t1 = nib.load(f'{higherlev_dir}/avg_COPEs/{roi}_S1_COPE_MNIstd_TxGroup1_avg.nii.gz')
+    map1_t1 = group_map1_t1.get_fdata()
+    group_map1_t2 = nib.load(f'{higherlev_dir}/avg_COPEs/{roi}_S2_COPE_MNIstd_TxGroup1_avg.nii.gz')
+    map1_t2 = group_map1_t2.get_fdata()
 
-plt.tight_layout()
-plt.show()
+    # Load standard brain for plotting thresholded z-scores
+    std_brain_obj = nib.load(MNI_std_path)
+    std_brain = std_brain_obj.get_fdata()
+    std_brain = np.rot90(std_brain[:,:,40])
+
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5)) # plot (correlation change between pre- vs. post-Tx timepoint) maps in same figure
+
+    # Choose an axial slice to display (axial is in dimension 3 of these arrays); subtract pre- from post-Tx
+    # diff_img0 = np.rot90(abs(map0_t2[:,:,40]) - abs(map0_t1[:,:,40])) # plot differences between absolute value COPEs
+    # diff_img1 = np.rot90(abs(map1_t2[:,:,40]) - abs(map1_t1[:,:,40]))
+    # diff_img0 = np.rot90(abs(abs(map0_t2[:,:,40]) - abs(map0_t1[:,:,40]))) # plot absolute value of differences between absolute value COPEs
+    # diff_img1 = np.rot90(abs(abs(map1_t2[:,:,40]) - abs(map1_t1[:,:,40])))
+    # diff_img0 = np.rot90(np.square(map0_t2[:,:,40]) - np.square(map0_t1[:,:,40])) # plot difference of squares (squared post- minus squared pre-Tx)
+    # diff_img1 = np.rot90(np.square(map1_t2[:,:,40]) - np.square(map1_t1[:,:,40]))
+    diff_img0 = np.rot90(z_score(map0_t2[:,:,40]) - z_score(map0_t1[:,:,40])) # plot difference between z-scored COPEs
+    diff_img1 = np.rot90(z_score(map1_t2[:,:,40]) - z_score(map1_t1[:,:,40]))
+
+    # Create masked versions (everywhere the image == 0 is just not plotted and will appear black)
+    # masked_img0 = np.ma.masked_where(diff_img0 == 0, diff_img0)
+    # masked_img1 = np.ma.masked_where(diff_img1 == 0, diff_img1)
+    diff_img0 = np.ma.masked_where(diff_img0 == 0, diff_img0)
+    diff_img1 = np.ma.masked_where(diff_img1 == 0, diff_img1)
+
+    # Thresholding (if z-scoring)
+    masked_img0 = np.ma.masked_where(np.abs(diff_img0) < threshold, diff_img0)
+    masked_img1 = np.ma.masked_where(np.abs(diff_img1) < threshold, diff_img1)
+
+    # Determine the common color scale across both images
+    vmin = min(np.min(masked_img0), np.min(masked_img1))
+    vmax = max(np.max(masked_img0), np.max(masked_img1))
+
+    # Plot standard brain as the background
+    ax[0].imshow(std_brain, cmap='gray', interpolation='nearest')
+    ax[1].imshow(std_brain, cmap='gray', interpolation='nearest')
+
+    # Create a custom colormap that maps zero values to transparent (if plotting z-scores over MNI152 brain)
+    cmap = plt.get_cmap('hot')
+    cmap.set_bad(color='black', alpha=0)
+
+    cmap = plt.get_cmap('hot') # set colormap theme
+    # cmap.set_bad(color='black')  # set the color for masked values to black
+
+    # Plot WORDS! (group 1) time difference
+    ax0 = ax[0].imshow(masked_img0, cmap=cmap, interpolation='nearest', vmin=vmin, vmax=vmax)
+    cb = plt.colorbar(ax0, ax=ax[0])  # associate the colorbar with the first axis
+    cb.set_label('Squared post- minus squared pre-Tx ROI-whole brain corr')
+    ax[0].set_title(f'WORDS! Pre- to Post-Tx Change: {roi}')
+    ax[0].axis('off')
+
+    # Plot BandTogether (group 0) time difference
+    ax1 = ax[1].imshow(masked_img1, cmap=cmap, interpolation='nearest', vmin=vmin, vmax=vmax)
+    cb = plt.colorbar(ax1, ax=ax[1])  # associate the colorbar with the second axis
+    cb.set_label('Squared post- minus squared pre-Tx ROI-whole brain corr')
+    ax[1].set_title(f'BandTogether Pre- to Post-Tx Change: {roi}')
+    ax[1].axis('off')
+
+    plt.tight_layout()
+    plt.show()
+    # fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_diffofsquares.png')
+    fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_zscored_thr=3.1.png')
+
 
 # %% Plot individual maps
 # NOTE: BandTogether = 0; WORDS! = 1
 # roi = 'R_MFG'
 # group_map1_t1 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
-map = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
+map = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/avg_COPEs/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
 map = map.get_fdata()
 
 # std_mask = nib.load(f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
