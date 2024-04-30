@@ -26,8 +26,8 @@ from my_imaging_tools import fmri_tools
 
 def process_subject(args): # function to help parallelize fnirt command
     roi, session, site, sub, Tx = args
-    home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized'
-    MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+    home_dir = f'/Volumes/EVO_Estia/EVO_MRI/organized'
+    MNI_std_path = f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
     # MNI_std_path = f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
     datadir = f'{home_dir}/{site}'
     feat_file_path = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol/S{session}_R1_lowerlev_vol.feat/stats/cope1'
@@ -43,7 +43,7 @@ def main(): # define class to set up parallelized commands
         reader = csv.reader(file)
         group_labels = list(reader)
 
-    home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+    home_dir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
     rois = ['L_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
     # rois = ['R_MFG']
     sessions = ['1','2']
@@ -78,10 +78,13 @@ def z_score(data):
 
 
 # Set up paths
-home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
-MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
-# MNI_std_path = f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
-Txlabels_csv = '/media/holland/EVO_Estia/EVO_rest_higherlev_vol/EVO_Tx_groups.csv'
+# home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to subject directories where lower-level Feat results are
+# MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+# Txlabels_csv = '/media/holland/EVO_Estia/EVO_rest_higherlev_vol/EVO_Tx_groups.csv'
+
+home_dir = f'/Volumes/EVO_Estia/EVO_MRI/organized'
+MNI_std_path = f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz'
+Txlabels_csv = '/Volumes/EVO_Estia/EVO_rest_higherlev_vol/EVO_Tx_groups.csv'
 
 sessions = ['1','2']
 rois = ['L_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
@@ -205,14 +208,21 @@ q.exec_cmds(cmd)
 """
 NOTE: These plots show areas of brain (group avg) with greatest change in ROI-whole brain correlation, 
 not negative vs. positive correlation
-
 >>> Need a different figure to show areas of positive vs. negative correlation
+
+# NOTE: z-scored maps show how extreme a value is compared to the rest of the distribution
+>>> here, can be useful for showing which regions have more extreme correlations with the ROI
+>>> however, don't show statistical significance
+
+# NOTE: Faith and Lindsay want to see only regions with statistically significant changes in correlation with ROI
+>>> Also want to see regions with statistically significant correlations with ROI at individual timepoints?
+>>> need to threshold using a p-value
 
 NOTE: BandTogether = 0; WORDS! = 1
 """
 
-threshold = 3.1  # Define threshold value (if z-scoring)
-higherlev_dir = '/media/holland/EVO_Estia/EVO_rest_higherlev_vol' # where avg COPE dir is; destination for figures
+threshold = 2  # Define threshold value (if z-scoring)
+higherlev_dir = '/Volumes/EVO_Estia/EVO_rest_higherlev_vol' # where avg COPE dir is; destination for figures
 rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 for roi in rois:
 
@@ -271,31 +281,31 @@ for roi in rois:
     # Plot WORDS! (group 1) time difference
     ax0 = ax[0].imshow(masked_img0, cmap=cmap, interpolation='nearest', vmin=vmin, vmax=vmax)
     cb = plt.colorbar(ax0, ax=ax[0])  # associate the colorbar with the first axis
-    cb.set_label('Squared post- minus squared pre-Tx ROI-whole brain corr')
+    cb.set_label('z-scored post- minus z-scored pre-Tx, threshold=2')
     ax[0].set_title(f'WORDS! Pre- to Post-Tx Change: {roi}')
     ax[0].axis('off')
 
     # Plot BandTogether (group 0) time difference
     ax1 = ax[1].imshow(masked_img1, cmap=cmap, interpolation='nearest', vmin=vmin, vmax=vmax)
     cb = plt.colorbar(ax1, ax=ax[1])  # associate the colorbar with the second axis
-    cb.set_label('Squared post- minus squared pre-Tx ROI-whole brain corr')
+    cb.set_label('z-scored post- minus z-scored pre-Tx, threshold=2')
     ax[1].set_title(f'BandTogether Pre- to Post-Tx Change: {roi}')
     ax[1].axis('off')
 
     plt.tight_layout()
     plt.show()
     # fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_diffofsquares.png')
-    fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_zscored_thr=3.1.png')
+    fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_zscored_thr=2.png')
 
 
 # %% Plot individual maps
 # NOTE: BandTogether = 0; WORDS! = 1
 # roi = 'R_MFG'
-# group_map1_t1 = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
-map = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/avg_COPEs/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
+# group_map1_t1 = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
+map = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/avg_COPEs/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
 map = map.get_fdata()
 
-# std_mask = nib.load(f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
+# std_mask = nib.load(f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
 # std_mask = std_mask.get_fdata()
 # std_mask[std_mask != 0] = 1
 
@@ -315,7 +325,7 @@ plt.show()
 # %% Plot individual COPE maps
 # NOTE: BandTogether = 0; WORDS! = 1
 # roi = 'L_MFG'
-# img = nib.load(f'/media/holland/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S2_TxGroup1_p=-1.nii.gz')
+# img = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S2_TxGroup1_p=-1.nii.gz')
 # map1_t1 = group_map1_t1.get_fdata()
 
 # fig, ax = plt.subplots(1, 1, figsize=(5, 5))
