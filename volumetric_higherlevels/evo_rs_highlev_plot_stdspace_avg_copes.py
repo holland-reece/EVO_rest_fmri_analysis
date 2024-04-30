@@ -1,4 +1,4 @@
-# EVO Post-MEP Resting-State Higher-Level Mixed Effects Linear Model Using Python statsmodels
+# EVO Post-MEP Resting-State Higher-Level: group average time point comparison of COPE images
 
 # Holland Brown
 
@@ -87,7 +87,7 @@ MNI_std_path = f'/Users/holland_brown_ra/fsl/data/standard/MNI152_T1_2mm_brain.n
 Txlabels_csv = '/Volumes/EVO_Estia/EVO_rest_higherlev_vol/EVO_Tx_groups.csv'
 
 sessions = ['1','2']
-rois = ['L_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 # rois = ['R_MFG'] # test
 sites = ['NKI','UW'] # collection sites (also names of dirs)
 
@@ -295,7 +295,7 @@ for roi in rois:
     plt.tight_layout()
     plt.show()
     # fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_diffofsquares.png')
-    fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_zscored_thr=2.png')
+    fig.savefig(f'{higherlev_dir}/{roi}_avgCOPE_Txgroups_abs_zscored_thr=2.png')
 
 
 # %% Plot individual maps
