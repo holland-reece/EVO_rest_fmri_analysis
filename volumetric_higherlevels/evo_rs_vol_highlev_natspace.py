@@ -2,11 +2,13 @@
 
 # Holland Brown
 
-# Updated 2024-04-04
+# Updated 2024-05-07
 # Created 2024-03-20
 
 # NOTE: 2024-03-29 kernel crashes; see GitHub bug report >> https://github.com/microsoft/vscode-jupyter/wiki/Kernel-crashes
     # 2024-04-03 created new environment (evo-fmri) and installed numpy, nibabel, statsmodels, and pandas fresh
+
+# NOTE: denoised_func_data_aggr.nii.gz already in std space (T1 2mm MNI152 brain)
 
 
 # %%
@@ -91,7 +93,7 @@ with open('/home/holland/Desktop/EVO_Tx_groups.csv', mode ='r')as file:
 TxLabels = []
 matrix = np.zeros((902629,55)) # for each subject, will reshape NIFTI into a vector -> 1 column
 # matrix = np.zeros(91,109,91,num_subjects)
-MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_1mm_brain.nii.gz'
+MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz' # subjects are already in this space; just need to align
 
 cmd = [None]
 for roi in rois:

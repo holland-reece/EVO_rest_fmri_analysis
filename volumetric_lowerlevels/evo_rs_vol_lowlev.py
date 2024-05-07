@@ -15,8 +15,7 @@
     # HCP-MMP1.0 projected onto fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_projected_on_fsaverage/3498446
     # script to create subject-specific parcellated image in fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_volumetric_NIfTI_masks_in_native_structural_space/4249400?file=13320527
 
-# NEXT:
-    # troubleshoot Feat not working in cluster
+# NOTE: denoised_func_data_aggr.nii.gz already in std space (T1 2mm MNI152 brain)
 
 # --------------------------------------------------------------------------------------
 # %%
