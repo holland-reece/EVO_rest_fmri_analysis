@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2023-01-12
+# Updated 2023-05-07
 # Created 2023-01-12
 
 # Subcortical structures are not included in the HCP-MMP1 atlas, so they are prepped for the lower level FEAT analyses separately here
@@ -14,9 +14,13 @@
     # HCP-MMP1.0 projected onto fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_projected_on_fsaverage/3498446
     # script to create subject-specific parcellated image in fsaverage space: https://figshare.com/articles/dataset/HCP-MMP1_0_volumetric_NIfTI_masks_in_native_structural_space/4249400?file=13320527
 
-# NEXT:
-    # figure out how to transform Harvard-Oxford amgydala ROI masks to subject func space
+"""
+Commands for extracting R/L Amygdala from HarvardOxford atlas:
 
+fslmaths $FSLDIR/data/atlases/HarvardOxford/HarvardOxford-sub-maxprob-thr50-2mm.nii.gz -thr 18 -uthr 18 -bin right_amygdala_mask.nii.gz
+fslmaths $FSLDIR/data/atlases/HarvardOxford/HarvardOxford-sub-maxprob-thr50-2mm.nii.gz -thr 50 -uthr 50 -bin right_amygdala_mask.nii.gz
+
+"""
 # --------------------------------------------------------------------------------------
 # %%
 import os
@@ -24,23 +28,20 @@ import json
 import glob
 from my_imaging_tools import fmri_tools
 
-site = 'NKI'
+# Set up paths
+# home_dir = f'/media/holland/EVO_Estia' # path to data, output dir, Tx labels file, etc.
+home_dir = f'/Volumes/EVO_Estia' # path to data, output dir, Tx labels file, etc.
+# MNI_std_path = f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz' # subjects are already in this space; just need to align
+MNI_std_path = f'/Users/amd_ras/fsl/data/standard/MNI152_T1_2mm_brain.nii.gz' # subjects are already in this space; just need to align
+Txlabels_csv = f'{home_dir}/EVO_rest_higherlev_vol/EVO_Tx_groups.csv' # csv containing Tx group labels
 
-# Important dirs
-home_dir = f'/athena/victorialab/scratch/hob4003/study_EVO/EVO_rest/EVO_rest_volumetric'
-datadir = f'/athena/victorialab/scratch/hob4003/study_EVO/{site}_MRI_data' # where subject folders are located
-# home_dir = f'/home/holland/Desktop/EVO_TEST' # where subject folders are located
-# datadir = f'{home_dir}/subjects' # where this script, atlas, and my_imaging_tools script are located
-
-# Probably won't need these identity matrices...
-# identity_mat = f'/athena/victorialab/scratch/hob4003/ME_Pipeline/MEF-P-HB/MultiEchofMRI-Pipeline/res0urces/ident.mat'
-# identity_mat = f'/home/holland/Documents/GitHub_repos/ME-fMRI-Pipeline-double-echo-fieldmaps/res0urces/ident.mat'
-
-q = fmri_tools(datadir) # init functions and subject list
+sites = ['NKI','UW']
 sessions = ['1','2']
 runs = ['1']
-# rois = ['L_Amygdala','R_Amygdala']
-rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
+rois = ['left_amygdala','right_amygdala']
+
+datadir = f'{home_dir}/EVO_MRI/organized'
+q = fmri_tools(datadir) # init functions and subject list
 timestep = 1.4
 
 
@@ -48,8 +49,34 @@ timestep = 1.4
 func_fn = 'denoised_func_data_aggr'
 
 # paths to Harvord-Oxford subcortical probabalistic amygdala masks in MNI space (no extension)
-L_amygdala_mni_mask = f'/home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_L Amygdala'
-R_amygdala_mni_mask = f'/home/holland/Desktop/MNI152_1mm_harvardoxford_subcort_prob_R Amygdala'
+L_amygdala_mask = f'{home_dir}/left_amygdala_mask.nii.gz'
+R_amygdala_mask = f'{home_dir}/right_amygdala_mask.nii.gz'
+
+# %% TEST: visualize masks
+import numpy as np
+import nibabel as nib
+import matplotlib.pyplot as plt
+
+
+std_brain = nib.load(MNI_std_path)
+std_brain = std_brain.get_fdata()
+std_brain = std_brain[:,:,35] # select slice to display
+
+map = nib.load(L_amygdala_mask)
+map1 = map.get_fdata()
+map = map1[:,:,35] # select slice to display
+map = np.ma.masked_where(map == 0, map)
+
+fig, ax = plt.subplots(1, 1, figsize=(5, 5))
+
+# Plot WORDS! (group 1) time difference
+ax.imshow(std_brain, cmap='gray', interpolation='nearest') # plot std brain in background
+# color = plt.get_cmap('Reds') # set colormap theme for roi mask
+ax0 = ax.imshow(map, cmap='hsv', interpolation='nearest')
+ax.axis('off')
+
+plt.tight_layout()
+plt.show()
 
 # %% First, align HCP-MMP1 in subject's FreeSurfer space to subject's anatomical -> get right pixel dims
 cmd=[None]*2
