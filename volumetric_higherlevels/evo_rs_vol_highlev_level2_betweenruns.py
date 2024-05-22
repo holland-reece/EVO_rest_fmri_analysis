@@ -1,10 +1,15 @@
-# EVO Post-MEP Resting-State Higher-Level (Level 2 Between-Runs) Fixed Effects Linear Model Using FSL Feat
+"""
+EVO Post-MEP Resting-State Higher-Level (Level 2, Within-Subjects Between-Runs) Fixed Effects Linear Model Using FSL Feat
 
-# Holland Brown
+Holland Brown
 
-# Updated 2024-05-21
-# Created 2024-05-21
+Updated 2024-05-22
+Created 2024-05-21
 
+NOTE: Recommend turning off the progress watcher in the fsf file before running this; it was useful while running the 
+lower-level (i.e. level 1, within-subjects within-runs) analyses, but level 2's run so quickly, if you leave the progress
+ watcher on it will randomly open browser windows every 5 seconds for about an hour, which is very annoying
+"""
 # --------------------------------------------------------------------------------------
 # %%
 import os
@@ -20,16 +25,19 @@ sessions = ['1','2']
 rois = ['L_MFG','R_MFG','L_dACC','R_dACC','L_rACC','R_rACC']
 sites = ['NKI','UW'] # collection sites (also names of dirs)
 
-feat_fn = f'level2'
-feat_df = f'/media/holland/EVO_Estia/EVO_rest_analyses/EVO_level2_betweenruns/{feat_fn}'
+"""
+NOTE: expects design fsf template to be named like "{feat_fn}_template.fsf", for example, "level2_template.fsf"
+>> feat_fn should be a short, simple, descriptive string; it will be used as part of longer folder/file names later
+>> EXAMPLES: feat_fn = 'level2', or 'EVO_level2', or 'higherlevel1'
+"""
+feat_fn = f'level2' # filename of fsf template without extension
+feat_path = f'/media/holland/EVO_Estia/EVO_rest_analyses/EVO_level2_betweenruns/{feat_fn}' # path to fsf file (NOTE: feat_fn is not complete filename; see above note)
 
 
 #%% Run lower-level analysis using design template (ref: first_level5.sh)
 cmd=[None]
 commands = [None]*3
 cmds = [None]*2
-
-# print(f'\n------------------------- Running Feat lower-levels -------------------------\n')
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
@@ -40,7 +48,7 @@ for site in sites:
             outdir = f'{home_dir}/{site}/{sub}/func/rest/rois/{roi}'
 
             # Copy Fest design file to subject's ROI dir and rename
-            cmds[0] = f'cp {feat_df}_template.fsf {outdir}' # copy design file into preproc dir
+            cmds[0] = f'cp {feat_path}_template.fsf {outdir}' # copy design file into preproc dir
             cmds[1] = f'mv {outdir}/{feat_fn}_template.fsf {outdir}/{sub}_{feat_fn}_level2_betweenruns.fsf' # rename design file
             q.exec_cmds(cmds)
 
