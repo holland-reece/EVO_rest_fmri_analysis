@@ -295,11 +295,11 @@ for roi in rois:
 # group_map1_t1 = nib.load(f'/Volumes/EVO_Estia/EVO_rest_higherlev_vol/{roi}/{roi}_S1_COPE_MNIstd_TxGroup0_avg.nii.gz')
 roi = 'R_rACC'
 threshold = 1.665
-map = nib.load(f'/media/holland/EVO_Estia/EVO_rest_analyses/EVO_level3_grouplevel_volume/{roi}_rest_level3_grouplevel.gfeat/cope1.feat/rendered_thresh_zstat1.nii.gz')
+map = nib.load(f'/Volumes/EVO_Estia/EVO_rest_analyses/EVO_level3_grouplevel_volume/{roi}_rest_level3_grouplevel.gfeat/cope1.feat/stats/zstat3.nii.gz')
 map = map.get_fdata()
 
 # Get standard MNI brain mask
-std_mask = nib.load(f'/home/holland/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
+std_mask = nib.load(f'/Users/amd_ras/fsl/data/standard/MNI152_T1_2mm_brain_mask.nii.gz')
 std_mask = std_mask.get_fdata()
 
 fig, ax = plt.subplots(1, 1, figsize=(5, 5))
@@ -307,8 +307,8 @@ fig, ax = plt.subplots(1, 1, figsize=(5, 5))
 img = np.rot90(map[:,:,40]) # select slice and rotate image 90 degrees
 std_mask = np.rot90(std_mask[:,:,40]) # select same slice as above and rotate image 90 degrees
 
-# idx = (std_mask==0) # get indices where standard MNI mask is 0
-img[std_mask==0] = np.nan # where MNI mask is 0, set image == 0
+idx = (std_mask==0) # get indices where standard MNI mask is 0
+# img[std_mask==0] = np.nan # where MNI mask is 0, set image == 0
 zmasked_img = img.copy() #np.ma.masked_where(img < threshold, img) # z-threshold masking
 # zmasked_img[img < np.nanmax(img, axis = None)] = np.nan #
 cmap = plt.get_cmap('gnuplot') # set colormap theme
@@ -316,14 +316,14 @@ cmap.set_bad(color='black', alpha=0)
 
 ax0 = ax.imshow(zmasked_img, cmap=cmap, interpolation='nearest')
 cb = plt.colorbar(ax0)
-cb.set_label('z-scored COPE values above threshold 2.3')
+cb.set_label(f'z-scored COPE values above threshold {threshold}')
 ax.set_title(f'BandTogether change - WORDS! change')
 ax.axis('off')
 
 plt.tight_layout()
 plt.show()
 
-fig.savefig(f'/media/holland/EVO_Estia/EVO_rest_analyses/EVO_level3_grouplevel_volume/python_visualizations/contrast1_{roi}.png')
+fig.savefig(f'/Volumes/EVO_Estia/EVO_rest_analyses/EVO_level3_grouplevel_volume/python_visualizations/contrast1_{roi}.png')
 
 
 # %%
