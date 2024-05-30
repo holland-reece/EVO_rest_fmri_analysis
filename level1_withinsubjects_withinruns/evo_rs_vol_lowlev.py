@@ -72,7 +72,7 @@ for site in sites:
             q.exec_echo(f'Subject {sub} does not have a volumetric parcellation directory.')
 
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
-cmd = [None]*2
+cmd = [None]*9
 command = [None]
 
 # temp: re-run lower levels for these...
@@ -88,6 +88,7 @@ for site in sites:
         # subprocess.run(command, shell=True, executable='/bin/bash')
 
         # ROI parcel names from HCP MMP1.0 atlas labels
+        # [holland] NOTE: Lindsay told me which ROIs from HCP-MMP1 atlas to concatenate to create our 6 ROIs
         if roi == 'R_MFG':
             roi_parcels = ['R_IFSa_ROI','R_46_ROI','R_p9-46v_ROI'] # R_MFG
         elif roi == 'L_MFG':
@@ -136,17 +137,19 @@ for site in sites:
                             else:
                                 cmd_str = f'{cmd_str} -add {sub_parc_niftis_dir}/masks/{p}'
 
-                        # if os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==False:
-                            # cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
-                            # cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
-                            # cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
-                            # cmd[3] = f'fslroi {func_in}.nii.gz {func_in}_rmvols.nii.gz 10 394' # Remove first 10 volumes (wasn't done during MEP)
-                            # cmd[4] = f'fslmaths {func_in}_rmvols.nii.gz -add 10000 {func_in}_rmvols_remean.nii.gz' # recenter functional data at 10000
-                            # cmd[3] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize
-                            # cmd[4] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
-                        cmd[0] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_v2.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
-                        cmd[1] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_thr0.8_v2.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
-                        q.exec_cmds(cmd)
+                        # NOTE: 2024-05-30 used default bin threshold for lower-levels; don't need to run 0.8 thr commands here
+                        # [holland] There are two versions of these outputs in EVO HDD, one ending in '0.8' bc I tried both 0.8 threshold and default threshold vals
+                        if os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==False:
+                            cmd[0] = f'{cmd_str} {mask_out}' # combine Glasser ROI parcels into roi mask with fslmaths
+                            cmd[1] = f'fslreorient2std {mask_out} {mask_out}_reoriented' # reorient HCP-MMP1 masks to FSL standard orientation
+                            cmd[2] = f'flirt -2D -in {mask_out}_reoriented.nii.gz -ref {flirt_reference}.nii.gz -out {mask_out}_denoiseaggrfunc.nii.gz -omat {mask_out}_denoiseaggrfunc.mat' # 2D align ROI mask with func
+                            cmd[3] = f'fslroi {func_in}.nii.gz {func_in}_rmvols.nii.gz 10 394' # Remove first 10 volumes (wasn't done during MEP)
+                            cmd[4] = f'fslmaths {func_in}_rmvols.nii.gz -add 10000 {func_in}_rmvols_remean.nii.gz' # recenter functional data at 10000
+                            cmd[5] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin {mask_out}_denoiseaggrfunc_bin.nii.gz' # binarize (default threshold)
+                            cmd[6] = f'fslmaths {mask_out}_denoiseaggrfunc.nii.gz -bin -thr 0.8 {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # binarize with threshold 0.8
+                            cmd[7] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_v2.txt -m {mask_out}_denoiseaggrfunc_bin.nii.gz' # calculate mean time series
+                            cmd[8] = f'fslmeants -i {func_in}_rmvols_remean.nii.gz -o {roi_ts}_thr0.8_v2.txt -m {mask_out}_denoiseaggrfunc_bin0.8.nii.gz' # calculate mean time series from mask with threshold 0.8
+                            q.exec_cmds(cmd)
                         # elif os.path.isfile(f'{roi_ts}_thr0.8_v2.txt')==True:
                             # q.exec_echo(f'Subject {sub} already has {roi} text file...')
     q.exec_echo('Done.')
@@ -155,12 +158,6 @@ for site in sites:
 cmd=[None]
 commands = [None]*9
 cmds = [None]*2
-
-# temp: re-run lower levels for these...
-sessions = ['1','2']
-# subs = ['W305','W162','W086','97023']
-subs = ['97023']
-sites = ['NKI']
 
 print(f'\n------------------------- Running Feat lower-levels -------------------------\n')
 
