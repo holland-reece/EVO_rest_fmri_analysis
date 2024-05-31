@@ -71,14 +71,10 @@ for site in sites:
         elif os.path.isdir(sub_parc_niftis_dir)==False:
             q.exec_echo(f'Subject {sub} does not have a volumetric parcellation directory.')
 
+
 # %% Second, concat ROI parcels into subject-specific ROI masks and align them to subjects' functional space; then, extract ROI time series
 cmd = [None]*9
 command = [None]
-
-# temp: re-run lower levels for these...
-sessions = ['1']
-# subs = ['W305','W162','W086','97023']
-subs = ['97023']
 
 for site in sites:
     datadir = f'{home_dir}/{site}' # where subject dirs are located
@@ -102,14 +98,14 @@ for site in sites:
         elif roi == 'L_rACC':
             roi_parcels = ['L_p24_ROI','L_a24_ROI'] # L_rACC
 
-        for sub in subs:
+        for sub in q.subs:
             print(f'{sub}')
             sub_parc_niftis_dir = f'{datadir}/{sub}/anat/{sub}_HCP-MMP1_vol_roi_masks' # path to Glasser atlas in subject func space
             for session in sessions:
                 for run in runs:
                     if os.path.isfile(f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA/{func_fn}_rmvols.nii.gz')==True:
                         q.exec_echo(f'{sub}_S{session}_R{run} : {roi}')
-                        glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc.nii.gz'
+                        # glasser_atlas_out = f'{sub_parc_niftis_dir}/HCP-MMP1_denoiseaggrfunc.nii.gz'
                         # if os.path.isfile(f'{glasser_atlas_out}'): #and (os.path.isfile(f'{roi_ts}_thr0.8.txt')==False):
 
                         roidir = f'{datadir}/{sub}/func/rest/rois/{roi}/rest_lowerlev_vol' # output dir for volumetric roi analysis
@@ -120,7 +116,10 @@ for site in sites:
                         mask_out = f'{roidir}/{roi}_S{session}_R{run}' # mask comprised of Glasser ROI parcels; prefix for other ROI mask output files
                         cmd_str = f'fslmaths' # init cmd string to concatenate roi parcels
 
-                        # files for time-series extraction
+                        # input files
+                        bet_anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1_brain.nii.gz'
+                        if os.path.isfile(bet_anat)==False:
+                            print(f'No skull-stripped T1w anatomical for subject {sub}...')
                         func_in = f'{datadir}/{sub}/func/rest/session_{session}/run_{run}/Rest_ICAAROMA/{func_fn}'
                         roi_ts = f'{roidir}/{roi}_S{session}_R{run}_timeseries'
 
@@ -154,7 +153,22 @@ for site in sites:
                             # q.exec_echo(f'Subject {sub} already has {roi} text file...')
     q.exec_echo('Done.')
 
-#%% 6. Run lower-level analysis using design template (ref: first_level5.sh)
+# %% Skull-strip anatomicals to use for registration in Feat
+# NOTE: skull-stripped anatomical needs to have same name and be in same dir as raw anatomical, but ends with '_brain'
+# because in Feat, linear reg uses skull-stripped structural image; nonlinear reg uses both raw & skull-stripped;
+# Feat looks for NIfTI file with same name as skull-stripped image but without '_brain' for nonlinear reg
+command = [None]
+for site in sites:
+    datadir = f'{home_dir}/{site}'
+    q = fmri_tools(datadir)
+    for sub in q.subs:
+        anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1.nii.gz' # raw anatomical
+        bet_anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1_brain.nii.gz' # same dir and filename as raw anat but should end with '_brain.nii.gz'
+        if os.path.isfile(bet_anat)==False:
+            command = f'bet2 {anat} {bet_anat} -f 0.6' # set to a more aggressive threshold to remove more non-brain
+
+
+# %% Run lower-level analysis using design template (ref: first_level5.sh)
 cmd=[None]
 commands = [None]*9
 cmds = [None]*2
@@ -170,8 +184,10 @@ for site in sites:
     elif site == 'UW':
         timestep = '1.399999'
 
-    for sub in subs: # test
+    for sub in q.subs:
         print(f'{sub}\n')
+        # skull-stripped anatomical; same dir and filename as raw anat but should end with '_brain.nii.gz'
+        bet_anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1_brain.nii.gz'
         for session in sessions:
             # only proceed if participant has processed func file for this session
             if os.path.isdir(f'{datadir}/{sub}/func/rest/session_{session}'):
@@ -209,6 +225,7 @@ for site in sites:
                             commands[6] = f"sed -i 's;MRIRUN;{run};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             commands[7] = f"sed -i 's;DATADIRSTR;{datadir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             commands[8] = f"sed -i 's;FSLDIRSTR;{home_dir};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
+                            commands[9] = f"sed -i 's;BETANATOMICAL;{bet_anat};g' {outdir}/{feat_fn}_{sub}_S{session}_R{run}.fsf"
                             q.exec_cmds(commands)
 
                             q.exec_echo(f'\n-------- Running Feat analysis for {sub} --------\n')
