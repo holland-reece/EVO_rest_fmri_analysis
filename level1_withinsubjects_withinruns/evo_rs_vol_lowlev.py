@@ -2,7 +2,7 @@
 
 # Holland Brown
 
-# Updated 2024-03-22
+# Updated 2024-05-31
 # Created 2023-11-28
 
 # Separate linear model for each subject, 2 repeated measures (sessions), 6 ROIs
@@ -31,7 +31,8 @@ from my_imaging_tools import fmri_tools
 # args = parser.parse_args()
 
 # Important dirs
-home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+# home_dir = f'/media/holland/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
+home_dir = f'/Volumes/EVO_Estia/EVO_MRI/organized' # path to MNI brain template for FSL, fsf file, etc
 
 # q = fmri_tools(studydir=datadir, subjectlist_text=args.subjecttextlist) # init functions and subject list
 
