@@ -158,15 +158,21 @@ for site in sites:
 # NOTE: skull-stripped anatomical needs to have same name and be in same dir as raw anatomical, but ends with '_brain'
 # because in Feat, linear reg uses skull-stripped structural image; nonlinear reg uses both raw & skull-stripped;
 # Feat looks for NIfTI file with same name as skull-stripped image but without '_brain' for nonlinear reg
-command = [None]
+
+# NOTE: ran this, then manually opened each file to see which was better; then made a copy of the best one and changed filename to same dir as raw anatomical, but ends with '_brain'
+# NOTE: must do manual QA for this step before moving on bc results can be variable from participant to participant
+command = [None]*2
 for site in sites:
     datadir = f'{home_dir}/{site}'
     q = fmri_tools(datadir)
     for sub in q.subs:
         anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1.nii.gz' # raw anatomical
-        bet_anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1_brain.nii.gz' # same dir and filename as raw anat but should end with '_brain.nii.gz'
+        bet_anat = f'{datadir}/{sub}/anat/unprocessed/T1w_1_brain' # same dir and filename as raw anat but should end with '_brain.nii.gz'
         if os.path.isfile(bet_anat)==False:
-            command = f'bet2 {anat} {bet_anat} -f 0.6' # set to a more aggressive threshold to remove more non-brain
+            command[0] = f'bet2 {anat} {bet_anat}_bet2_f=0.6 -f 0.6 -m' # set to a more aggressive threshold to remove more non-brain
+            command[1] = f'bet {anat} {bet_anat}_bet_f=0.5_R -f 0.5 -R -m' # set to a more aggressive threshold to remove more non-brain
+            q.exec_cmds(command)
+
 
 
 # %% Run lower-level analysis using design template (ref: first_level5.sh)
