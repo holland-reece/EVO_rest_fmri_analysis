@@ -38,7 +38,7 @@ to understand the code.
 """
 
 # --------------------------------------------------------------------------------------
-# %%
+# %% Import packages
 import os
 import subprocess
 import numpy as np
@@ -52,7 +52,7 @@ import glob
 import math
 from my_imaging_tools import fmri_tools
 
-# Define functions
+# %% Define functions
 def round_down(n, decimals=0):
     multiplier = 10 ** decimals
     return math.floor(n * multiplier) / multiplier
